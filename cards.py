@@ -1,6 +1,7 @@
 # cards.py
 from enum import Enum
 
+
 class Card(Enum):
     # Hearts - Kier
     H1 = "Ace of Hearts"
