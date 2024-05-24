@@ -1,176 +1,184 @@
-# gui.py
 import os
 import tkinter as tk
-from tkinter import messagebox
 from PIL import Image, ImageTk
-from main import init_new_game, player_turn, computer_turn, print_game_table  # Importuj logikę gry
+from logic import GameLogic
 
-from main import p2_supply, p1_hand, p1_supply, p2_hand, gamestack1, gamestack2
 
-folder_path = 'images'
-ROWS = 4
-COLUMNS = 13
-CARD_WIDTH = 72  # Adjust based on your card image dimensions
-CARD_HEIGHT = 96  # Adjust based on your card image dimensions
-PADDING_X = 10
-PADDING_Y = 10
-# scaled_images = []
+class GameGUI:
 
-def get_all_files(folder_path):
-    # List all files in the specified directory
-    filenames = os.listdir(folder_path)
-    # Filter out directories and include the full path for files
-    filepaths = [os.path.join(folder_path, f) for f in filenames if os.path.isfile(os.path.join(folder_path, f))]
-    return filepaths
+    # Constants for grid layout
+    ROWS = 4
+    COLUMNS = 10
+    CARD_WIDTH = 120  # Adjust based on your card image dimensions
+    CARD_HEIGHT = 180  # Adjust based on your card image dimensions
+    SCREEN_WIDTH = COLUMNS * CARD_WIDTH
+    SCREEN_HEIGHT = ROWS * CARD_HEIGHT
+    PADDING_X = 10
+    PADDING_Y = 10
 
-# Function to handle mouse movement
-# def on_mouse_move(event):
-#     for card_id in card_ids:
-#         # Check if mouse is inside the card's bounding box
-#         if canvas.bbox(card_id) and canvas.bbox(card_id)[0] <= event.x <= canvas.bbox(card_id)[2] and canvas.bbox(card_id)[1] <= event.y <= canvas.bbox(card_id)[3]:
-#             canvas.itemconfig(highlight_id, state='normal')
-#             canvas.coords(highlight_id, canvas.bbox(card_id))
-#             break
-#     else:
-#         canvas.itemconfig(highlight_id, state='hidden')
+    canvas = None
+    card_images = []
+    clickable_items = []
+    highlight_rect = None
 
-class CardGameGUI:
+    # shared lists
+    p1_hand = []
+    p1_supply = []
+    p1_reshuffle = []
+    p2_hand = []
+    p2_supply = []
+    p2_reshuffle = []
+    gamestack1 = []
+    gamestack2 = []
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("Card Game")
 
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Fast Hand card game")
+        self.logic = None
 
-        # load all images from the images folder
+        # UI components
 
-        file_list = get_all_files(folder_path)
-        # print(file_list)
+        # Create a canvas to display cards
+        self.canvas = tk.Canvas(self.root, width=self.SCREEN_WIDTH, height=self.SCREEN_HEIGHT, bg='green')
+        self.canvas.pack()
 
+        # start_button = tk.Button(self.root, text="Start Game", command=self.start_game)
+        # start_button.pack()
+        #
+        # self.label = tk.Label(self.root, text="Game not started")
+        # self.label.pack()
+
+        self.load_card_images()
+
+        # Create a highlight rectangle (initially hidden)
+        self.highlight_rect = self.canvas.create_rectangle(0, 0, 0, 0, outline='yellow', width=3, state='hidden')
+
+        # Bind mouse motion to the on_mouse_move function
+        self.canvas.bind('<Motion>', self.on_mouse_move)
+        self.canvas.bind('<Button-1>', self.on_click)
+
+        # ===================== End of constructor =====================
+
+    def set_logic(self, logic):
+        self.logic = logic
+
+    def set_shared_lists(self, p1_h, p1_s, p1_r, p2_h, p2_s, p2_r, g1, g2):
+        self.p1_hand = p1_h
+        self.p1_supply = p1_s
+        self.p1_reshuffle = p1_r
+
+        self.p2_hand = p2_h
+        self.p2_supply = p2_s
+        self.p2_reshuffle = p2_r
+
+        self.gamestack1 = g1
+        self.gamestack2 = g2
+
+    def load_card_images(self):
+        folder_path = 'images'
+        file_list = self.get_all_files(folder_path)
         # scale the images to the same size
-        self.scaled_images = []
         for path in file_list:
             image = Image.open(path)
-            image = image.resize((150, 250))  # Resize the image to 100x100 pixels
+            image = image.resize((self.CARD_WIDTH, self.CARD_HEIGHT))  # Resize the image to 100x100 pixels
             photo = ImageTk.PhotoImage(image)
-            self.scaled_images.append(photo)
+            self.card_images.append(photo)
 
-        # Tworzenie przycisków i etykiet
-        self.init_widgets()
+    def get_all_files(self, folder_path):
+        # List all files in the specified directory
+        filenames = os.listdir(folder_path)
+        # Filter out directories and include the full path for files
+        filepaths = [os.path.join(folder_path, f) for f in filenames if os.path.isfile(os.path.join(folder_path, f))]
+        return filepaths
 
-        # Inicjalizacja gry
-        # self.new_game()
+    def start_game(self):
+        pass
 
+    def update(self):
+        print("Updating GUI")
+        # self.canvas.delete("all")  # "all" is a special tag to delete all items
+        # self.hover_highlight_items.clear()
+        self.draw_gameboard()
 
-    def init_widgets(self):
-        canvas = tk.Canvas(root, width=800, height=600, bg='green')
-        canvas.pack()
+    def run(self):
+        self.root.mainloop()
 
-        # Etykiety do wyświetlania informacji o kartach
+    # Function to handle card highlight on mouse move
+    def on_mouse_move(self, event):
+        canvas = self.canvas  # Alias for self.canvas
+        highlight_rect = self.highlight_rect  # Alias for self.highlight_id
 
-
-        player1_hand_labels = []
-        player2_hand_labels = []
-
-
-        # Player 2 Hand
-        for i in range(5):
-            player2_hand_labels.append(tk.Label(self.root, image=self.scaled_images[1]))
-            player2_hand_labels[i].grid(row=0, column=i, padx=5, pady=5)
-        # Player 2 Supply
-        self.p2_supply_label = tk.Label(self.root, text="Player 2 Supply: ")
-        self.p2_supply_label.grid(row=0, column=5, padx=5, pady=5)
-
-
-
-        # Gamestacks & Reshuffles
-        reshuffle1_image = tk.Label(self.root, image=self.scaled_images[1])
-        reshuffle1_image.grid(row=1, column=0, padx=5, pady=5)
-        reshuffle1_text = tk.Label(self.root, text="Enemy Reshuffle: 7")
-        reshuffle1_text.grid(row=1, column=1, padx=5, pady=5)
-
-        gamestack1_image = tk.Label(self.root, image=self.scaled_images[2])
-        gamestack1_image.grid(row=1, column=3, padx=5, pady=5)
-
-        gamestack2_image = tk.Label(self.root, image=self.scaled_images[3])
-        gamestack2_image.grid(row=1, column=4, padx=5, pady=5)
-
-        reshuffle2_text = tk.Label(self.root, text="Your Reshuffle : 69")
-        reshuffle2_text.grid(row=1, column=6, padx=5, pady=5)
-        reshuffle2_image = tk.Label(self.root, image=self.scaled_images[0])
-        reshuffle2_image.grid(row=1, column=7, padx=5, pady=5)
-
-        # Player 1 Hand
-        for i in range(5):
-            player1_hand_labels.append(tk.Label(self.root, image=self.scaled_images[i]))
-            player1_hand_labels[i].grid(row=3, column=i, padx=5, pady=5)  # Place labels in a row
-            # player1_hand_labels[i].pack()
-        # Player 1 Supply
-        self.p1_supply_label = tk.Label(self.root, text="Player 1 Supply: ")
-        self.p1_supply_label.grid(row=3, column=5, padx=5, pady=5)
+        for card_id in self.clickable_items:
+            # Check if mouse is inside the card's bounding box
+            if canvas.bbox(card_id) and canvas.bbox(card_id)[0] <= event.x <= canvas.bbox(card_id)[2] and \
+                    canvas.bbox(card_id)[1] <= event.y <= canvas.bbox(card_id)[3]:
+                canvas.itemconfig(highlight_rect, state='normal')
+                canvas.coords(highlight_rect, canvas.bbox(card_id))
+                break
+            else:
+                canvas.itemconfig(highlight_rect, state='hidden')
 
 
-        # self.gamestack1_label = tk.Label(self.root, image=self.scaled_images[0])
-        # self.gamestack1_label.pack()
+    # Function to blink the bad choice rectangle
+    def on_bad_mouse_click(self, event):
+        pass
 
-        # Define a function to handle the click event
-        # def on_image_click(event):
-        #     print("Image clicked!")
-        #
-        # # Bind the click event to the Label widget
-        # self.gamestack1_label.bind("<Button-1>", on_image_click)
-        #
+    # Function to handle the click event
+    def on_click(self, event):
+        canvas = self.canvas
 
+        for card_id in self.clickable_items:
+            bbox = canvas.bbox(card_id)
+            if bbox and bbox[0] <= event.x <= bbox[2] and bbox[1] <= event.y <= bbox[3]:
+                self.image_click_function(card_id)
+                break
 
-
-
-
-        # self.p2_hand_label = tk.Label(self.root, text="Player 2 Hand: ")
-        # self.p2_hand_label.pack()
-        #
-        # # self.gamestack1_label = tk.Label(self.root, text="Gamestack 1: ")
-        # # self.gamestack1_label.pack()
-        #
-        # self.gamestack2_label = tk.Label(self.root, text="Gamestack 2: ")
-        # self.gamestack2_label.pack()
-        #
-        # # Przycisk nowej gry
-        # self.new_game_button = tk.Button(self.root, text="New Game", command=self.new_game)
-        # self.new_game_button.pack()
-        #
-        # # Przycisk ruchu gracza 1
-        # self.player1_turn_button = tk.Button(self.root, text="Player 1 Turn", command=self.player1_turn)
-        # self.player1_turn_button.pack()
-
-    def new_game(self):
-        init_new_game()
-        self.update_display()
-
-    def player1_turn(self):
-        if player_turn(p1_hand, p1_supply):
-            self.update_display()
-            self.computer_turn()
-        else:
-            messagebox.showinfo("Info", "Player 1 cannot play any card.")
-
-    def computer_turn(self):
-        if computer_turn(p2_hand, p2_supply):
-            self.update_display()
-        else:
-            messagebox.showinfo("Info", "Computer cannot play any card.")
-
-    def update_display(self):
-        self.p1_hand_label.config(text=f"Player 1 Hand: {p1_hand}")
-        self.p2_hand_label.config(text=f"Player 2 Hand: {p2_hand}")
-        self.gamestack1_label.config(text=f"Gamestack 1: {gamestack1[0]}")
-        self.gamestack2_label.config(text=f"Gamestack 2: {gamestack2[0]}")
-
-        # Sprawdzanie wygranej
-        if len(p1_hand) == 0 and len(p1_supply) == 0:
-            messagebox.showinfo("Info", "Player 1 won the game!")
-        if len(p2_hand) == 0 and len(p2_supply) == 0:
-            messagebox.showinfo("Info", "Player 2 won the game!")
+    def image_click_function(self, image_id):
+        print(f"Image {image_id} clicked!")
 
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = CardGameGUI(root)
-    root.mainloop()
+    def draw_gameboard(self):
+        canvas = self.canvas  # Alias for self.canvas
+        card_images = self.card_images  # Alias for self.card_images
+
+        # ===================== ROW 1 =
+
+        # draw p2 supply
+        for i, card in enumerate(self.p2_supply):
+            card_id = canvas.create_image(100 + i * 3, 100 - i * 3, image=card_images[1], anchor=tk.NW)
+
+        # draw p2 hand
+        for i, card in enumerate(self.p2_hand):
+            card_id = canvas.create_image(300 + i * 140, 100, image=card_images[1], anchor=tk.NW)
+
+        # ===================== ROW 2
+
+        # draw p2 reshuffle stack
+        for i, card in enumerate(self.p1_reshuffle):
+            card_id = canvas.create_image(100 + i * 3, 300 - i * 3, image=card_images[1], anchor=tk.NW)
+
+        # draw gamestacks
+        canvas.create_image(450, 300, image=card_images[20], anchor=tk.NW)
+        canvas.create_image(600, 300, image=card_images[40], anchor=tk.NW)
+
+        # draw p1 reshuffle stack
+        for i, card in enumerate(self.p1_reshuffle):
+            card_id = canvas.create_image(1000 + i * 5, 300 - i * 5, image=card_images[0], anchor=tk.NW)
+
+        # ===================== ROW 3
+
+        # draw p1 hand
+        for i, card in enumerate(self.p1_hand):
+            card_id = canvas.create_image(150 + i * 140, 500, image=card_images[i + 2], anchor=tk.NW)
+            self.clickable_items.append(card_id)
+
+        # draw p1 supply
+        for i, card in enumerate(self.p1_supply):
+            card_id = canvas.create_image(900 + i * 3, 500 - i * 3, image=card_images[0], anchor=tk.NW)
+            # add the last card to the highlight list
+            last_item_index = -1
+            if len(self.p1_supply) > 0:
+                last_item_index = len(self.p1_supply) - 1
+            if i == last_item_index:
+                self.clickable_items.append(card_id)
+
