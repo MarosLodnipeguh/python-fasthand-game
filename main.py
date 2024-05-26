@@ -2,9 +2,9 @@ import gui
 from logic import GameLogic
 
 def main():
-    app = gui.GameGUI()
-    logic = GameLogic(app)
-    app.set_logic(logic)
+    logic = GameLogic()
+    app = gui.GameGUI(logic)
+    logic.set_gui(app)
     app.run()
 
 if __name__ == "__main__":
