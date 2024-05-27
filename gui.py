@@ -7,16 +7,16 @@ from game_event import GameEvent
 
 class GameGUI:
     # Constants for layout
-    ROWS = 4
-    COLUMNS = 10
+    # ROWS = 4
+    # COLUMNS = 10
     CARD_WIDTH = 120  # Adjust based on your card image dimensions
     CARD_HEIGHT = 180  # Adjust based on your card image dimensions
     # SCREEN_WIDTH = COLUMNS * CARD_WIDTH
     # SCREEN_HEIGHT = ROWS * CARD_HEIGHT
     SCREEN_WIDTH = 1125
     SCREEN_HEIGHT = 750
-    PADDING_X = 10
-    PADDING_Y = 10
+    # PADDING_X = 10
+    # PADDING_Y = 10
 
     canvas = None
     card_images = {} # key: image_path, value: photo
@@ -24,6 +24,7 @@ class GameGUI:
     highlight_rect = None
     bad_highlight_rect = None
     computer_latency = 1
+    game_state = "waiting"
 
     # shared lists
     p1_hand = []
@@ -92,15 +93,22 @@ class GameGUI:
 
     def update_gui(self, message):
         # print("logic gui update request with mess: " + message)
-        # Update the status label
-        # self.root.after(0, lambda: self.game_status.config(text=message))
-        # Update the canvas
-        if message == "Player 1 wins":
-            self.canvas.create_text(505, 500, text="Player 1 won!", font=("Helvetica", 12, "bold"), fill="white")
-        if message == "Player 2 wins":
-            self.canvas.create_text(505, 80, text="Player 2 won!", font=("Helvetica", 12, "bold"), fill="white")
-        if message == "Game draw":
-            self.canvas.create_text(50, 500, text="Game draw!", font=("Helvetica", 12, "bold"), fill="white")
+
+        if message == "reshuffle":
+            self.game_state = "Waiting for reshuffle"
+            self.canvas.create_text(90, 400, text=self.game_state, font=("Helvetica", 12, "bold"), fill="white")
+        elif message == "Player 1 wins":
+            self.game_state = "Player 1 wins!"
+            self.clickable_items.clear()
+            self.canvas.create_text(90, 400, text=self.game_state, font=("Helvetica", 12, "bold"), fill="white")
+        elif message == "Player 2 wins":
+            self.game_state = "Player 2 wins!"
+            self.clickable_items.clear()
+            self.canvas.create_text(90, 400, text=self.game_state, font=("Helvetica", 12, "bold"), fill="white")
+        elif message == "Game draw":
+            self.game_state = "Game draw!"
+            self.clickable_items.clear()
+            self.canvas.create_text(90, 400, text=self.game_state, font=("Helvetica", 12, "bold"), fill="white")
         else:
             self.root.after(0, self.update_canvas)
 
@@ -194,7 +202,7 @@ class GameGUI:
             card_id = canvas.create_image(25 + i * 3, 50 - i * 3, image=card_images[red_reverse_path], anchor=tk.NW)
 
         if len(self.p2_supply) > 0:
-            self.canvas.create_text(90, 240, text="player 2 supply", font=("Fixedsys", 8), fill="white")
+            self.canvas.create_text(90, 240, text=("player 2 supply: " + str(len(self.p2_supply))), font=("Fixedsys", 8), fill="white")
 
 
         # draw p2 hand
@@ -217,7 +225,7 @@ class GameGUI:
             card_id = canvas.create_image(225 + i * 3, 300 - i * 3, image=card_images[red_reverse_path], anchor=tk.NW)
 
         if len(self.p2_reshuffle) > 0:
-            self.canvas.create_text(290, 490, text="reshuffle", font=("Fixedsys", 8), fill="white")
+            self.canvas.create_text(290, 490, text=("reshuffle: " + str(len(self.p2_reshuffle))), font=("Fixedsys", 8), fill="white")
 
 
         # draw gamestacks
@@ -236,7 +244,7 @@ class GameGUI:
             card_id = canvas.create_image(785 - i * 3, 300 - i * 3, image=card_images[blue_reverse_path], anchor=tk.NW)
 
         if len(self.p1_reshuffle) > 0:
-            self.canvas.create_text(840, 490, text="reshuffle", font=("Fixedsys", 8), fill="white")
+            self.canvas.create_text(840, 490, text=("reshuffle: " + str(len(self.p1_reshuffle))), font=("Fixedsys", 8), fill="white")
 
         # ===================== ROW 3 =====================
 
@@ -259,5 +267,5 @@ class GameGUI:
                 self.clickable_items[card_id] = GameEvent("draw", i)  # Event type: draw card
 
         if len(self.p1_supply) > 0:
-            self.canvas.create_text(1040, 720, text="player 1 supply", font=("Fixedsys", 8), fill="white")
+            self.canvas.create_text(1030, 720, text=("player 1 supply: " + str(len(self.p1_supply))), font=("Fixedsys", 8), fill="white")
 
