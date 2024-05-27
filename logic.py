@@ -1,10 +1,11 @@
-# logic.py
 from threading import Thread
-
-from cards_data import CardsEnum
-from card import Card
 import time
 import random
+
+from models.cards_data import CardsEnum
+from models.card import Card
+from models.gamestack import GameStack
+from models.player import Player
 
 p1_hand = []  # 5 cards
 p1_supply = []  # 13 cards at the start
@@ -24,6 +25,12 @@ class GameLogic:
     gui_update_listener = None
 
     def __init__(self):
+        self.p1 = Player()
+        self.p2 = Player()
+
+        self.gm1 = GameStack()
+        self.gm2 = GameStack()
+
         self.gui = None
 
     # ===================== End of constructor =====================

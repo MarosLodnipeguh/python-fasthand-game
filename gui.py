@@ -2,7 +2,7 @@ import os
 import tkinter as tk
 from PIL import Image, ImageTk
 from threading import Thread
-from game_event import GameEvent
+from models.game_event import GameEvent
 
 
 class GameGUI:
@@ -19,8 +19,8 @@ class GameGUI:
     # PADDING_Y = 10
 
     canvas = None
-    card_images = {} # key: image_path, value: photo
-    clickable_items = {}  # key: card image object (card_id), value: game_event (type of action and card index)
+    card_images = {} # key: image_path, value: photo image object
+    clickable_items = {}  # key: card image object (card_id), value: game_event (type of action and card index in its list)
     highlight_rect = None
     bad_highlight_rect = None
     computer_latency = 1
@@ -82,6 +82,7 @@ class GameGUI:
         self.root.mainloop()
 
     def start_game(self):
+        self.game_state = "Game in progress"
         # Create and start the game loop thread
         self.game_thread = Thread(target=self.run_game)
         # self.game_thread = Thread(target=self.logic.start_game(self.update_gui, self.computer_latency))
@@ -109,7 +110,7 @@ class GameGUI:
             self.game_state = "Game draw!"
             self.clickable_items.clear()
             self.canvas.create_text(90, 400, text=self.game_state, font=("Helvetica", 12, "bold"), fill="white")
-        else:
+        elif self.game_state == "Game in progress":
             self.root.after(0, self.update_canvas)
 
     def update_canvas(self):
@@ -182,9 +183,9 @@ class GameGUI:
 
     def image_click_function(self, game_event):
         # check if its a play or draw action and call the corresponding logic function
-        if game_event.get_type() == "play":
+        if game_event.get_name() == "play":
             self.logic.player_play(game_event.get_index(), self.update_gui)
-        elif game_event.get_type() == "draw":
+        elif game_event.get_name() == "draw":
             self.logic.player_draw(self.update_gui)
 
 
