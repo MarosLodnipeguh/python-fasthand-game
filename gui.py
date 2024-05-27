@@ -1,7 +1,6 @@
 import os
 import tkinter as tk
 from PIL import Image, ImageTk
-from logic import GameLogic
 from threading import Thread
 from game_event import GameEvent
 
@@ -12,10 +11,10 @@ class GameGUI:
     COLUMNS = 10
     CARD_WIDTH = 120  # Adjust based on your card image dimensions
     CARD_HEIGHT = 180  # Adjust based on your card image dimensions
-    SCREEN_WIDTH = COLUMNS * CARD_WIDTH
-    SCREEN_HEIGHT = ROWS * CARD_HEIGHT
-    # SCREEN_WIDTH = 1000
-    # SCREEN_HEIGHT = 600
+    # SCREEN_WIDTH = COLUMNS * CARD_WIDTH
+    # SCREEN_HEIGHT = ROWS * CARD_HEIGHT
+    SCREEN_WIDTH = 1125
+    SCREEN_HEIGHT = 750
     PADDING_X = 10
     PADDING_Y = 10
 
@@ -55,9 +54,9 @@ class GameGUI:
         # label = tk.Label(self.root, text="Adjust the value:")
         # self.canvas.create_window(200, 200, window=label)  # Position above the slider
 
-        self.canvas.create_text(600, 365, text="Set the computer latency:", font=("Helvetica", 12))
+        self.canvas.create_text(600, 365, text="Set the computer latency:", font=("Helvetica", 12, "bold"), fill="white")
 
-        slider = tk.Scale(self.root, from_=0.5, to=10, orient='horizontal', resolution=0.1, command=self.set_computer_latency)
+        slider = tk.Scale(self.root, from_=0, to=10, orient='horizontal', resolution=0.1, command=self.set_computer_latency)
         self.canvas.create_window(600, 400, window=slider)
 
         self.load_card_images()
@@ -96,7 +95,14 @@ class GameGUI:
         # Update the status label
         # self.root.after(0, lambda: self.game_status.config(text=message))
         # Update the canvas
-        self.root.after(0, self.update_canvas)
+        if message == "Player 1 wins":
+            self.canvas.create_text(505, 500, text="Player 1 won!", font=("Helvetica", 12, "bold"), fill="white")
+        if message == "Player 2 wins":
+            self.canvas.create_text(505, 80, text="Player 2 won!", font=("Helvetica", 12, "bold"), fill="white")
+        if message == "Game draw":
+            self.canvas.create_text(50, 500, text="Game draw!", font=("Helvetica", 12, "bold"), fill="white")
+        else:
+            self.root.after(0, self.update_canvas)
 
     def update_canvas(self):
         # print("Updating canvas")
@@ -185,45 +191,73 @@ class GameGUI:
 
         # draw p2 supply
         for i, card in enumerate(self.p2_supply):
-            card_id = canvas.create_image(100 + i * 3, 80 - i * 3, image=card_images[red_reverse_path], anchor=tk.NW)
+            card_id = canvas.create_image(25 + i * 3, 50 - i * 3, image=card_images[red_reverse_path], anchor=tk.NW)
+
+        if len(self.p2_supply) > 0:
+            self.canvas.create_text(90, 240, text="player 2 supply", font=("Fixedsys", 8), fill="white")
+
 
         # draw p2 hand
+
+        # hidden
+        # for i, card in enumerate(self.p2_hand):
+        #     card_id = canvas.create_image(300 + i * 140, 80, image=card_images[red_reverse_path], anchor=tk.NW)
+
+        # shown
         for i, card in enumerate(self.p2_hand):
-            card_id = canvas.create_image(300 + i * 140, 80, image=card_images[red_reverse_path], anchor=tk.NW)
+            image_path = self.p2_hand[i].get_image_path()
+            card_id = canvas.create_image(225 + i * 140, 50, image=card_images[image_path], anchor=tk.NW)
+
+        self.canvas.create_text(565, 25, text="player 2 hand", font=("Fixedsys", 8), fill="white")
 
         # ===================== ROW 2 =====================
 
         # draw p2 reshuffle stack
         for i, card in enumerate(self.p1_reshuffle):
-            card_id = canvas.create_image(100 + i * 3, 300 - i * 3, image=card_images[red_reverse_path], anchor=tk.NW)
+            card_id = canvas.create_image(225 + i * 3, 300 - i * 3, image=card_images[red_reverse_path], anchor=tk.NW)
+
+        if len(self.p2_reshuffle) > 0:
+            self.canvas.create_text(290, 490, text="reshuffle", font=("Fixedsys", 8), fill="white")
+
 
         # draw gamestacks
         for i, card in enumerate(self.gamestack1):
             image_path = self.gamestack1[i].get_image_path()
-            card_id = canvas.create_image(450 - i * 2, 300 - i * 2, image=card_images[image_path], anchor=tk.NW)
+            card_id = canvas.create_image(430 - i * 2, 300 - i * 2, image=card_images[image_path], anchor=tk.NW)
 
         for i, card in enumerate(self.gamestack2):
             image_path = self.gamestack2[i].get_image_path()
-            card_id = canvas.create_image(600 + i * 2, 300 - i * 2, image=card_images[image_path], anchor=tk.NW)
+            card_id = canvas.create_image(580 + i * 2, 300 - i * 2, image=card_images[image_path], anchor=tk.NW)
+
+        self.canvas.create_text(560, 490, text="game stacks", font=("Fixedsys", 8), fill="white")
 
         # draw p1 reshuffle stack
         for i, card in enumerate(self.p1_reshuffle):
-            card_id = canvas.create_image(1000 - i * 3, 300 - i * 3, image=card_images[blue_reverse_path], anchor=tk.NW)
+            card_id = canvas.create_image(785 - i * 3, 300 - i * 3, image=card_images[blue_reverse_path], anchor=tk.NW)
+
+        if len(self.p1_reshuffle) > 0:
+            self.canvas.create_text(840, 490, text="reshuffle", font=("Fixedsys", 8), fill="white")
 
         # ===================== ROW 3 =====================
 
         # draw p1 hand
         for i, card in enumerate(self.p1_hand):
             image_path = self.p1_hand[i].get_image_path()
-            card_id = canvas.create_image(150 + i * 140, 500, image=card_images[image_path], anchor=tk.NW)
+            card_id = canvas.create_image(225 + i * 140, 530, image=card_images[image_path], anchor=tk.NW)
             self.clickable_items[card_id] = GameEvent("play", i)  # Event type: play card
+        self.canvas.create_text(565, 730, text="player 1 hand", font=("Fixedsys", 8), fill="white")
+
 
         # draw p1 supply
         for i, card in enumerate(self.p1_supply):
-            card_id = canvas.create_image(900 - i * 3, 500 - i * 3, image=card_images[blue_reverse_path], anchor=tk.NW)
+            card_id = canvas.create_image(975 - i * 3, 530 - i * 3, image=card_images[blue_reverse_path], anchor=tk.NW)
             # add the last card to the highlight list
             last_item_index = -1
             if len(self.p1_supply) > 0:
                 last_item_index = len(self.p1_supply) - 1
             if i == last_item_index:
                 self.clickable_items[card_id] = GameEvent("draw", i)  # Event type: draw card
+
+        if len(self.p1_supply) > 0:
+            self.canvas.create_text(1040, 720, text="player 1 supply", font=("Fixedsys", 8), fill="white")
+

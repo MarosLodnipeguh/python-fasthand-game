@@ -71,6 +71,7 @@ class GameLogic:
             p1_reshuffle.append(deck.pop())
             p2_reshuffle.append(deck.pop())
 
+# ===================== Player actions =====================
     def player_play(self, card_hand_index, update_callback):
         # check what cards are on top of gamestacks
         gm1_top_card = gamestack1[len(gamestack1) - 1]
@@ -123,8 +124,10 @@ class GameLogic:
             if len(p1_hand) < 5:
                 p1_hand.append(p1_supply.pop())
                 update_callback("player drew a card")
-            else:
-                print("You can't draw a card! Your hand is full!")
+            # else:
+            #     print("You can't draw a card! Your hand is full!")
+
+# ===================== Computer player logic =====================
 
     # returns True if the computer played something, False if not
     def computer_play(self, player_hand, player_supply):
@@ -136,35 +139,28 @@ class GameLogic:
         gm1_top_card_power = gm1_top_card.get_power()
         gm2_top_card_power = gm2_top_card.get_power()
 
-        chosen_gamestack = -1
         # check if a play is possible
         for card in player_hand:
             player_card_power = card.get_power()
             if player_card_power + 1 == gm1_top_card_power or player_card_power - 1 == gm1_top_card_power:
                 can_play = True
-                chosen_gamestack = 1
                 break
             elif player_card_power + 1 == gm2_top_card_power or player_card_power - 1 == gm2_top_card_power:
                 can_play = True
-                chosen_gamestack = 2
                 break
             # ace card special case
             elif player_card_power == 1 and gm1_top_card_power == 13:
                 can_play = True
-                chosen_gamestack = 1
                 break
             elif player_card_power == 1 and gm2_top_card_power == 13:
                 can_play = True
-                chosen_gamestack = 2
                 break
             # king card special case
             elif player_card_power == 13 and gm1_top_card_power == 1:
                 can_play = True
-                chosen_gamestack = 1
                 break
             elif player_card_power == 13 and gm2_top_card_power == 1:
                 can_play = True
-                chosen_gamestack = 2
                 break
 
         if can_play:
@@ -206,8 +202,14 @@ class GameLogic:
             # put the chosen card on the right gamestack
             if chosen_gamestack == 1:
                 gamestack1.append(chosen_card)
+                self.gui_update_listener("player 2 played a card")
+
             elif chosen_gamestack == 2:
                 gamestack2.append(chosen_card)
+                self.gui_update_listener("player 2 played a card")
+
+            # wait 1 second before drawing a card
+            time.sleep(2)
 
             # draw a card from the supply to the hand
             if len(player_supply) > 0:
@@ -220,7 +222,17 @@ class GameLogic:
             print("\nComputer can't play ANY card!")
             return False
 
-    # ===================== Main game loop =====================
+    def computer_player(self):
+        # wait 3 seconds before the computer starts playing
+        time.sleep(3)
+
+        while self.game_running:
+            play = self.computer_play(p2_hand, p2_supply)
+            if play:
+                self.gui_update_listener("player 2 played a card")
+            time.sleep(self.computer_latency)
+
+# ===================== Main game loop =====================
 
     def can_player_play(self, player_hand, player_suuply):
         # check what cards are on top of gamestacks
@@ -245,14 +257,7 @@ class GameLogic:
                 return True
             elif player_card_power == 13 and gm2_top_card_power == 1:
                 return True
-
-            return False
-
-    def computer_player(self):
-        while self.game_running:
-            self.computer_play(p2_hand, p2_supply)
-            self.gui_update_listener("player 2 turn")
-            time.sleep(self.computer_latency)
+        return False
 
     def start_game(self, update_callback, computer_latency):
         self.init_new_game()
@@ -266,17 +271,21 @@ class GameLogic:
         computer_player_thread = Thread(target=self.computer_player)
         computer_player_thread.start()
 
+        # loop checking if a player won the game or if the game is a draw
         while self.game_running:
+            time.sleep(1)
 
             # check if any player won the game (no cards in hand and supply)
             if len(p1_hand) == 0 and len(p1_supply) == 0:
                 print("Player 1 won the game!")
-                game_running = False
+                self.game_running = False
+                self.gui_update_listener("Player 1 wins")
                 break
 
             if len(p2_hand) == 0 and len(p2_supply) == 0:
                 print("Player 2 won the game!")
-                game_running = False
+                self.game_running = False
+                self.gui_update_listener("Player 2 wins")
                 break
 
             # computer action - separate thread TODO
@@ -290,23 +299,42 @@ class GameLogic:
 
             # check if both players cannot play a card
             if not p1_state and not p2_state:
+
+                # case when both players have full hands
+                if len(p1_hand) == 5 and len(p2_hand) == 5:
+                    self.reshuffle_gamestacks()
+
+                # case when only one player has empty supply but both players cant play a card
+                if len(p1_supply) == 0 and len(p2_supply) > 0:
+                    self.reshuffle_gamestacks()
+                elif len(p2_supply) == 0 and len(p1_supply) > 0:
+                    self.reshuffle_gamestacks()
+
+                # case when both players have empty supplies and cant play a card
+                if len(p1_supply) == 0 and len(p2_supply) == 0:
+                    self.reshuffle_gamestacks()
+
                 # if reshuffle stacks are empty, and no one can play a card, game is won by the player with the least cards in hand and supply
                 if len(p1_reshuffle) == 0 and len(p2_reshuffle) == 0:
                     if len(p1_hand) + len(p1_supply) < len(p2_hand) + len(p2_supply):
                         print("Player 1 won the game!")
+                        self.game_running = False
+                        self.gui_update_listener("Player 1 wins")
                         break
                     elif len(p1_hand) + len(p1_supply) > len(p2_hand) + len(p2_supply):
                         print("Player 2 won the game!")
+                        self.game_running = False
+                        self.gui_update_listener("Player 2 wins")
                         break
                     else:
                         print("Game draw!")
+                        self.game_running = False
+                        self.gui_update_listener("Game draw")
                         break
-                    # update_callback("game finished")
-                    # game_running = False
 
-                # reshuffle when no one can play a card
-                print("No one can play a card! RESHUFFLE THE STACKS!")
-                gamestack1.append(p1_reshuffle.pop())
-                gamestack2.append(p2_reshuffle.pop())
-                update_callback("reshuffle stacks")
-                time.sleep(1)
+    def reshuffle_gamestacks(self):
+        print("No one can play a card! RESHUFFLE THE STACKS!")
+        time.sleep(3)
+        gamestack1.append(p1_reshuffle.pop())
+        gamestack2.append(p2_reshuffle.pop())
+        self.gui_update_listener("gamestacks reshuffled")
