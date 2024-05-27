@@ -7,13 +7,15 @@ from game_event import GameEvent
 
 
 class GameGUI:
-    # Constants for grid layout
+    # Constants for layout
     ROWS = 4
     COLUMNS = 10
     CARD_WIDTH = 120  # Adjust based on your card image dimensions
     CARD_HEIGHT = 180  # Adjust based on your card image dimensions
     SCREEN_WIDTH = COLUMNS * CARD_WIDTH
     SCREEN_HEIGHT = ROWS * CARD_HEIGHT
+    # SCREEN_WIDTH = 1000
+    # SCREEN_HEIGHT = 600
     PADDING_X = 10
     PADDING_Y = 10
 
@@ -22,6 +24,7 @@ class GameGUI:
     clickable_items = {}  # key: card image object (card_id), value: game_event (type of action and card index)
     highlight_rect = None
     bad_highlight_rect = None
+    computer_latency = 1
 
     # shared lists
     p1_hand = []
@@ -46,11 +49,16 @@ class GameGUI:
         self.canvas = tk.Canvas(self.root, width=self.SCREEN_WIDTH, height=self.SCREEN_HEIGHT, bg='green')
         self.canvas.pack()
 
-        # Create a button
         button = tk.Button(self.root, text="Start the game", command=self.start_game)
+        self.canvas.create_window(600, 300, window=button)
 
-        # Place the button on the canvas
-        self.canvas.create_window(200, 150, window=button)
+        # label = tk.Label(self.root, text="Adjust the value:")
+        # self.canvas.create_window(200, 200, window=label)  # Position above the slider
+
+        self.canvas.create_text(600, 365, text="Set the computer latency:", font=("Helvetica", 12))
+
+        slider = tk.Scale(self.root, from_=0.5, to=10, orient='horizontal', resolution=0.1, command=self.set_computer_latency)
+        self.canvas.create_window(600, 400, window=slider)
 
         self.load_card_images()
 
@@ -64,32 +72,35 @@ class GameGUI:
 
 # ===================== End of constructor ====================
 
+    def set_computer_latency(self, value):
+        float_value = float(value)
+        self.computer_latency = float_value
+
     def create_highlight_rect(self):
         self.highlight_rect = self.canvas.create_rectangle(0, 0, 0, 0, outline='yellow', width=3, state='hidden')
     def run(self):
         self.root.mainloop()
 
     def start_game(self):
-        # self.logic.init_new_game()
         # Create and start the game loop thread
         self.game_thread = Thread(target=self.run_game)
+        # self.game_thread = Thread(target=self.logic.start_game(self.update_gui, self.computer_latency))
         self.game_thread.start()
-        # self.logic.start_game()
         self.update_canvas()
-        print("gui : start_game")
 
     def run_game(self):
-        self.logic.start_game(self.update_gui)
+        self.logic.start_game(self.update_gui, self.computer_latency)
 
     def update_gui(self, message):
-        print("logic gui update request with mess: " + message)
+        # print("logic gui update request with mess: " + message)
         # Update the status label
         # self.root.after(0, lambda: self.game_status.config(text=message))
         # Update the canvas
         self.root.after(0, self.update_canvas)
 
     def update_canvas(self):
-        print("Updating canvas")
+        # print("Updating canvas")
+        # clear everything and recreate
         self.canvas.delete("all")  # "all" is a special tag to delete all items
         self.clickable_items.clear()
         self.create_highlight_rect()
@@ -118,8 +129,6 @@ class GameGUI:
             photo = ImageTk.PhotoImage(image)
             path = path.replace("\\", "/")
             self.card_images[path] = photo
-        print(self.card_images)
-
 
 
 
@@ -149,7 +158,7 @@ class GameGUI:
     def on_click(self, event):
         canvas = self.canvas # Alias for self.canvas
 
-        print(event)
+        # print(event)
         for key, value in self.clickable_items.items():
             card_id = key
             bbox = canvas.bbox(card_id)
@@ -160,9 +169,9 @@ class GameGUI:
     def image_click_function(self, game_event):
         # check if its a play or draw action and call the corresponding logic function
         if game_event.get_type() == "play":
-            self.logic.player_play_test(game_event.get_index(), self.update_gui)
+            self.logic.player_play(game_event.get_index(), self.update_gui)
         elif game_event.get_type() == "draw":
-            self.logic.player_draw_test(self.update_gui)
+            self.logic.player_draw(self.update_gui)
 
 
     def draw_gameboard(self):
@@ -199,7 +208,7 @@ class GameGUI:
 
         # draw p1 reshuffle stack
         for i, card in enumerate(self.p1_reshuffle):
-            card_id = canvas.create_image(1000 + i * 3, 300 - i * 3, image=card_images[blue_reverse_path], anchor=tk.NW)
+            card_id = canvas.create_image(1000 - i * 3, 300 - i * 3, image=card_images[blue_reverse_path], anchor=tk.NW)
 
         # ===================== ROW 3 =====================
 
@@ -211,7 +220,7 @@ class GameGUI:
 
         # draw p1 supply
         for i, card in enumerate(self.p1_supply):
-            card_id = canvas.create_image(900 + i * 3, 500 - i * 3, image=card_images[blue_reverse_path], anchor=tk.NW)
+            card_id = canvas.create_image(900 - i * 3, 500 - i * 3, image=card_images[blue_reverse_path], anchor=tk.NW)
             # add the last card to the highlight list
             last_item_index = -1
             if len(self.p1_supply) > 0:
