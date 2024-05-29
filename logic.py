@@ -207,8 +207,8 @@ class GameLogic:
                 gamestack2.append(chosen_card)
                 self.gui_update_listener("player 2 played a card")
 
-            # wait 1 second before drawing a card
-            time.sleep(2)
+            # wait before drawing a card
+            time.sleep(1)
 
             # draw a card from the supply to the hand
             if len(player_supply) > 0:
@@ -226,10 +226,11 @@ class GameLogic:
         time.sleep(3)
 
         while self.game_running:
+            time.sleep(self.computer_latency)
+
             play = self.computer_play(p2_hand, p2_supply)
             if play:
                 self.gui_update_listener("player 2 played a card")
-            time.sleep(self.computer_latency)
 
     # ===================== Main game loop =====================
 
