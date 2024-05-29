@@ -1,8 +1,9 @@
 import os
+import sys
 import tkinter as tk
 from PIL import Image, ImageTk
 from threading import Thread
-from models.game_event import GameEvent
+from models.game_event import ClickEvent
 
 
 class GameGUI:
@@ -19,12 +20,13 @@ class GameGUI:
     # PADDING_Y = 10
 
     canvas = None
-    card_images = {} # key: image_path, value: photo image object
+    card_images = {}  # key: image_path, value: photo image object
     clickable_items = {}  # key: card image object (card_id), value: game_event (type of action and card index in its list)
     highlight_rect = None
     bad_highlight_rect = None
     computer_latency = 1
     game_state = "waiting"
+    player_chosen_card = None
 
     # shared lists
     p1_hand = []
@@ -42,6 +44,7 @@ class GameGUI:
         self.root = tk.Tk()
         self.root.title("Card Game")
 
+        self.root.protocol("WM_DELETE_WINDOW", self.close_game)
 
         # UI components
 
@@ -52,12 +55,11 @@ class GameGUI:
         button = tk.Button(self.root, text="Start the game", command=self.start_game)
         self.canvas.create_window(600, 300, window=button)
 
-        # label = tk.Label(self.root, text="Adjust the value:")
-        # self.canvas.create_window(200, 200, window=label)  # Position above the slider
+        self.canvas.create_text(600, 365, text="Set the computer latency:", font=("Helvetica", 12, "bold"),
+                                fill="white")
 
-        self.canvas.create_text(600, 365, text="Set the computer latency:", font=("Helvetica", 12, "bold"), fill="white")
-
-        slider = tk.Scale(self.root, from_=0, to=10, orient='horizontal', resolution=0.1, command=self.set_computer_latency)
+        slider = tk.Scale(self.root, from_=0, to=10, orient='horizontal', resolution=0.1,
+                          command=self.set_computer_latency)
         self.canvas.create_window(600, 400, window=slider)
 
         self.load_card_images()
@@ -65,12 +67,11 @@ class GameGUI:
         # Create a highlight rectangle (initially hidden)
         self.create_highlight_rect()
 
-
         # Bind mouse motion and click events
         self.canvas.bind('<Motion>', self.on_mouse_move)
         self.canvas.bind('<Button-1>', self.on_click)
 
-# ===================== End of constructor ====================
+    # ===================== End of constructor ====================
 
     def set_computer_latency(self, value):
         float_value = float(value)
@@ -78,6 +79,7 @@ class GameGUI:
 
     def create_highlight_rect(self):
         self.highlight_rect = self.canvas.create_rectangle(0, 0, 0, 0, outline='yellow', width=3, state='hidden')
+
     def run(self):
         self.root.mainloop()
 
@@ -85,16 +87,13 @@ class GameGUI:
         self.game_state = "Game in progress"
         # Create and start the game loop thread
         self.game_thread = Thread(target=self.run_game)
-        # self.game_thread = Thread(target=self.logic.start_game(self.update_gui, self.computer_latency))
         self.game_thread.start()
-        self.update_canvas()
+        self.repaint_canvas()
 
     def run_game(self):
         self.logic.start_game(self.update_gui, self.computer_latency)
 
     def update_gui(self, message):
-        # print("logic gui update request with mess: " + message)
-
         if message == "reshuffle":
             self.game_state = "Waiting for reshuffle"
             self.canvas.create_text(90, 400, text=self.game_state, font=("Helvetica", 12, "bold"), fill="white")
@@ -111,15 +110,14 @@ class GameGUI:
             self.clickable_items.clear()
             self.canvas.create_text(90, 400, text=self.game_state, font=("Helvetica", 12, "bold"), fill="white")
         elif self.game_state == "Game in progress":
-            self.root.after(0, self.update_canvas)
+            self.root.after(0, self.repaint_canvas)
 
-    def update_canvas(self):
-        # print("Updating canvas")
+    def repaint_canvas(self):
         # clear everything and recreate
         self.canvas.delete("all")  # "all" is a special tag to delete all items
         self.clickable_items.clear()
-        self.create_highlight_rect()
         self.draw_gameboard()
+        self.create_highlight_rect()
 
     def set_shared_lists(self, p1_h, p1_s, p1_r, p2_h, p2_s, p2_r, g1, g2):
         self.p1_hand = p1_h
@@ -145,10 +143,6 @@ class GameGUI:
             path = path.replace("\\", "/")
             self.card_images[path] = photo
 
-
-
-
-
     # Function to handle card highlight on mouse move
     def on_mouse_move(self, event):
         canvas = self.canvas  # Alias for self.canvas
@@ -169,25 +163,28 @@ class GameGUI:
     def on_bad_mouse_click(self, event):
         pass
 
-    # Function to handle the click event
+    # Function to handle the click event (call the image_click_function when any of clickable items is clicked)
     def on_click(self, event):
-        canvas = self.canvas # Alias for self.canvas
-
-        # print(event)
-        for key, value in self.clickable_items.items():
+        canvas = self.canvas  # Alias for self.canvas
+        for key, value in self.clickable_items.items():  # key: card_id, value: game_event
             card_id = key
             bbox = canvas.bbox(card_id)
             if bbox and bbox[0] <= event.x <= bbox[2] and bbox[1] <= event.y <= bbox[3]:
                 self.image_click_function(value)
                 break
 
-    def image_click_function(self, game_event):
-        # check if its a play or draw action and call the corresponding logic function
-        if game_event.get_name() == "play":
-            self.logic.player_play(game_event.get_index(), self.update_gui)
-        elif game_event.get_name() == "draw":
+    def image_click_function(self, click_event):
+        if click_event.get_name() == "choose card":
+            self.player_chosen_card = click_event.get_index()
+        elif click_event.get_name() == "put card":
+            if self.player_chosen_card is None:
+                print("Choose a card first!")
+                return
+            chosen_gamestack = click_event.get_index()
+            self.logic.player_play(self.player_chosen_card, chosen_gamestack, self.update_gui)
+            self.player_chosen_card = None
+        elif click_event.get_name() == "draw card":
             self.logic.player_draw(self.update_gui)
-
 
     def draw_gameboard(self):
         canvas = self.canvas  # Alias for self.canvas
@@ -203,8 +200,8 @@ class GameGUI:
             card_id = canvas.create_image(25 + i * 3, 50 - i * 3, image=card_images[red_reverse_path], anchor=tk.NW)
 
         if len(self.p2_supply) > 0:
-            self.canvas.create_text(90, 240, text=("player 2 supply: " + str(len(self.p2_supply))), font=("Fixedsys", 8), fill="white")
-
+            self.canvas.create_text(90, 240, text=("player 2 supply: " + str(len(self.p2_supply))),
+                                    font=("Fixedsys", 8), fill="white")
 
         # draw p2 hand
 
@@ -226,17 +223,23 @@ class GameGUI:
             card_id = canvas.create_image(225 + i * 3, 300 - i * 3, image=card_images[red_reverse_path], anchor=tk.NW)
 
         if len(self.p2_reshuffle) > 0:
-            self.canvas.create_text(290, 490, text=("reshuffle: " + str(len(self.p2_reshuffle))), font=("Fixedsys", 8), fill="white")
-
+            self.canvas.create_text(290, 490, text=("reshuffle: " + str(len(self.p2_reshuffle))), font=("Fixedsys", 8),
+                                    fill="white")
 
         # draw gamestacks
         for i, card in enumerate(self.gamestack1):
             image_path = self.gamestack1[i].get_image_path()
             card_id = canvas.create_image(430 - i * 2, 300 - i * 2, image=card_images[image_path], anchor=tk.NW)
+            # add only the last card to the clickable list
+            if i == len(self.gamestack1) - 1:
+                self.clickable_items[card_id] = ClickEvent("put card", 1)  # Event type: draw card
 
         for i, card in enumerate(self.gamestack2):
             image_path = self.gamestack2[i].get_image_path()
             card_id = canvas.create_image(580 + i * 2, 300 - i * 2, image=card_images[image_path], anchor=tk.NW)
+            # add only the last card to the clickable list
+            if i == len(self.gamestack2) - 1:
+                self.clickable_items[card_id] = ClickEvent("put card", 2)  # Event type: draw card
 
         self.canvas.create_text(560, 490, text="game stacks", font=("Fixedsys", 8), fill="white")
 
@@ -245,7 +248,8 @@ class GameGUI:
             card_id = canvas.create_image(785 - i * 3, 300 - i * 3, image=card_images[blue_reverse_path], anchor=tk.NW)
 
         if len(self.p1_reshuffle) > 0:
-            self.canvas.create_text(840, 490, text=("reshuffle: " + str(len(self.p1_reshuffle))), font=("Fixedsys", 8), fill="white")
+            self.canvas.create_text(840, 490, text=("reshuffle: " + str(len(self.p1_reshuffle))), font=("Fixedsys", 8),
+                                    fill="white")
 
         # ===================== ROW 3 =====================
 
@@ -253,20 +257,19 @@ class GameGUI:
         for i, card in enumerate(self.p1_hand):
             image_path = self.p1_hand[i].get_image_path()
             card_id = canvas.create_image(225 + i * 140, 530, image=card_images[image_path], anchor=tk.NW)
-            self.clickable_items[card_id] = GameEvent("play", i)  # Event type: play card
+            self.clickable_items[card_id] = ClickEvent("choose card", i)  # Event type: play card
         self.canvas.create_text(565, 730, text="player 1 hand", font=("Fixedsys", 8), fill="white")
-
 
         # draw p1 supply
         for i, card in enumerate(self.p1_supply):
             card_id = canvas.create_image(975 - i * 3, 530 - i * 3, image=card_images[blue_reverse_path], anchor=tk.NW)
-            # add the last card to the highlight list
-            last_item_index = -1
-            if len(self.p1_supply) > 0:
-                last_item_index = len(self.p1_supply) - 1
-            if i == last_item_index:
-                self.clickable_items[card_id] = GameEvent("draw", i)  # Event type: draw card
+            # add only the last card to the clickable list
+            if i == len(self.p1_supply) - 1:
+                self.clickable_items[card_id] = ClickEvent("draw card", -1)  # Event type: draw card
 
         if len(self.p1_supply) > 0:
             self.canvas.create_text(1030, 720, text=("player 1 supply: " + str(len(self.p1_supply))), font=("Fixedsys", 8), fill="white")
 
+    def close_game(self):
+        self.root.destroy()
+        self.logic.close_game()

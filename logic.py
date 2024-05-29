@@ -78,52 +78,44 @@ class GameLogic:
             p1_reshuffle.append(deck.pop())
             p2_reshuffle.append(deck.pop())
 
-# ===================== Player actions =====================
-    def player_play(self, card_hand_index, update_callback):
-        # check what cards are on top of gamestacks
-        gm1_top_card = gamestack1[len(gamestack1) - 1]
-        gm2_top_card = gamestack2[len(gamestack2) - 1]
+    # ===================== Player actions =====================
+    def player_play(self, card_hand_index, chosen_gamestack_index, update_callback):
+        if chosen_gamestack_index is None:
+            update_callback("player didn't choose a gamestack")
+            return
 
-        gm1_top_card_power = gm1_top_card.get_power()
-        gm2_top_card_power = gm2_top_card.get_power()
+        # get the chosen gamestack
+        chosen_gamestack = None
+        if chosen_gamestack_index == 1:
+            chosen_gamestack = gamestack1
+        elif chosen_gamestack_index == 2:
+            chosen_gamestack = gamestack2
 
+        # check the power of the top card of the chosen gamestack
+        gamestack_top_card = chosen_gamestack[len(chosen_gamestack) - 1]
+        gamestack_top_card_power = gamestack_top_card.get_power()
+
+        # get the power of player's chosen card
         chosen_card = p1_hand[card_hand_index]
         player_card_power = chosen_card.get_power()
-        can_play = False
-        chosen_gamestack = -1
 
         # check if a play is possible with the chosen card
-        if player_card_power + 1 == gm1_top_card_power or player_card_power - 1 == gm1_top_card_power:
-            can_play = True
-            chosen_gamestack = 1
-        elif player_card_power + 1 == gm2_top_card_power or player_card_power - 1 == gm2_top_card_power:
-            can_play = True
-            chosen_gamestack = 2
-        # ace card special case
-        elif player_card_power == 1 and gm1_top_card_power == 13:
-            can_play = True
-            chosen_gamestack = 1
-        elif player_card_power == 1 and gm2_top_card_power == 13:
-            can_play = True
-            chosen_gamestack = 2
-        # king card special case
-        elif player_card_power == 13 and gm1_top_card_power == 1:
-            can_play = True
-            chosen_gamestack = 1
-        elif player_card_power == 13 and gm2_top_card_power == 1:
-            can_play = True
-            chosen_gamestack = 2
-
-        if can_play:
-            # remove the chosen card from the hand (play the card)
+        if player_card_power + 1 == gamestack_top_card_power or player_card_power - 1 == gamestack_top_card_power:
             p1_hand.pop(card_hand_index)
-            # put the chosen card on the right gamestack
-            if chosen_gamestack == 1:
-                gamestack1.append(chosen_card)
-            elif chosen_gamestack == 2:
-                gamestack2.append(chosen_card)
+            chosen_gamestack.append(chosen_card)
+            update_callback("player played a card")
+        # ace card special case
+        elif player_card_power == 1 and gamestack_top_card_power == 13:
+            p1_hand.pop(card_hand_index)
+            chosen_gamestack.append(chosen_card)
+            update_callback("player played a card")
+        # king card special case
+        elif player_card_power == 13 and gamestack_top_card_power == 1:
+            p1_hand.pop(card_hand_index)
+            chosen_gamestack.append(chosen_card)
             update_callback("player played a card")
         else:
+            print("You can't play this card!")
             update_callback("player can't play this card")
 
     def player_draw(self, update_callback):
@@ -134,7 +126,7 @@ class GameLogic:
             # else:
             #     print("You can't draw a card! Your hand is full!")
 
-# ===================== Computer player logic =====================
+    # ===================== Computer player logic =====================
 
     # returns True if the computer played something, False if not
     def computer_play(self, player_hand, player_supply):
@@ -239,7 +231,7 @@ class GameLogic:
                 self.gui_update_listener("player 2 played a card")
             time.sleep(self.computer_latency)
 
-# ===================== Main game loop =====================
+    # ===================== Main game loop =====================
 
     def can_player_play(self, player_hand, player_suuply):
         # check what cards are on top of gamestacks
@@ -345,3 +337,7 @@ class GameLogic:
         gamestack1.append(p1_reshuffle.pop())
         gamestack2.append(p2_reshuffle.pop())
         self.gui_update_listener("gamestacks reshuffled")
+
+    def close_game(self):
+        self.game_running = False
+        exit(0)
