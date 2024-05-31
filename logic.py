@@ -4,8 +4,7 @@ import random
 
 from models.cards_data import CardsEnum
 from models.card import Card
-from models.gamestack import GameStack
-from models.player import Player
+from events_and_listeners.event_listener import EventListener
 
 p1_hand = []  # 5 cards
 p1_supply = []  # 13 cards at the start
@@ -20,20 +19,19 @@ gamestack2 = []  # 1 card at the start
 class GameLogic:
     game_running = True
     computer_latency = -1
-    gui_event_listener = None
 
-    def __init__(self):
-        self.p1 = Player()
-        self.p2 = Player()
+    def __init__(self, gui: EventListener = None):
+        self.gui = gui
 
-        self.gm1 = GameStack()
-        self.gm2 = GameStack()
-
-        self.gui = None
+        # self.p1 = Player()
+        # self.p2 = Player()
+        #
+        # self.gm1 = GameStack()
+        # self.gm2 = GameStack()
 
     # ===================== End of constructor =====================
 
-    def set_gui(self, gui):
+    def set_gui(self, gui: EventListener):
         self.gui = gui
         # Share these lists with the GUI
         gui.set_shared_lists(p1_hand, p1_supply, p1_reshuffle,
@@ -101,34 +99,25 @@ class GameLogic:
         if player_card_power + 1 == gamestack_top_card_power or player_card_power - 1 == gamestack_top_card_power:
             p1_hand.pop(chosen_card_index)
             chosen_gamestack.append(chosen_card)
-            self.gui_event_listener("player played a card")
+            self.gui.repaint()
         # ace card special case
         elif player_card_power == 1 and gamestack_top_card_power == 13:
             p1_hand.pop(chosen_card_index)
             chosen_gamestack.append(chosen_card)
-            self.gui_event_listener("player played a card")
+            self.gui.repaint()
         # king card special case
         elif player_card_power == 13 and gamestack_top_card_power == 1:
             p1_hand.pop(chosen_card_index)
             chosen_gamestack.append(chosen_card)
-            self.gui_event_listener("player played a card")
+            self.gui.repaint()
         else:
             print("You can't play this card!")
-            # print("gamestack1: ", gamestack1[len(gamestack1) - 1].get_name() + " | gamestack2: ", gamestack2[len(gamestack2) - 1].get_name())
-            # print("p1_hand: ")
-            # for card in p1_hand:
-            #     print(card.get_name() + " ", end="")
-            # print("\nchosen index from gui: ", chosen_card_index)
-            # print("logic power: " + str(player_card_power))
-            # print("logic name: " + chosen_card.get_name())
-            # print("Gamestack card power: ", gamestack_top_card_power)
-            # self.gui_event_listener("player can't play this card")
 
     def player_draw(self):
         if len(p1_supply) > 0:
             if len(p1_hand) < 5:
                 p1_hand.append(p1_supply.pop())
-                self.gui_event_listener("player drew a card")
+                self.gui.repaint()
             else:
                 print("You can't draw! Your hand is full!")
 
@@ -207,11 +196,10 @@ class GameLogic:
             # put the chosen card on the right gamestack
             if chosen_gamestack == 1:
                 gamestack1.append(chosen_card)
-                self.gui_event_listener("player 2 played a card")
-
+                self.gui.repaint()
             elif chosen_gamestack == 2:
                 gamestack2.append(chosen_card)
-                self.gui_event_listener("player 2 played a card")
+                self.gui.repaint()
 
             # wait before drawing a card
             time.sleep(1)
@@ -236,7 +224,7 @@ class GameLogic:
 
             play = self.computer_play(p2_hand, p2_supply)
             if play:
-                self.gui_event_listener("player 2 played a card")
+                self.gui.repaint()
 
     # ===================== Main game loop =====================
 
@@ -265,14 +253,12 @@ class GameLogic:
                 return True
         return False
 
-    def start_game(self, update_callback, computer_latency):
+    def start_game(self, computer_latency):
         self.init_new_game()
+        self.gui.repaint()
 
-        # set the gui event listener and latency for computer
-        self.gui_event_listener = update_callback
+        # set latency for computer
         self.computer_latency = computer_latency
-
-        self.gui_event_listener("game started")
 
         # start the computer player thread
         computer_player_thread = Thread(target=self.computer_player)
@@ -286,13 +272,13 @@ class GameLogic:
             if len(p1_hand) == 0 and len(p1_supply) == 0:
                 print("Player 1 won the game!")
                 self.game_running = False
-                self.gui_event_listener("Player 1 wins")
+                self.gui.player_1_wins()
                 break
 
             if len(p2_hand) == 0 and len(p2_supply) == 0:
                 print("Player 2 won the game!")
                 self.game_running = False
-                self.gui_event_listener("Player 2 wins")
+                self.gui.player_2_wins()
                 break
 
             # can players play a card
@@ -321,28 +307,28 @@ class GameLogic:
                     if len(p1_hand) + len(p1_supply) < len(p2_hand) + len(p2_supply):
                         print("Player 1 won the game!")
                         self.game_running = False
-                        self.gui_event_listener("Player 1 wins")
+                        self.gui.player_1_wins()
                         break
                     elif len(p1_hand) + len(p1_supply) > len(p2_hand) + len(p2_supply):
                         print("Player 2 won the game!")
                         self.game_running = False
-                        self.gui_event_listener("Player 2 wins")
+                        self.gui.player_2_wins()
                         break
                     else:
                         print("Game draw!")
                         self.game_running = False
-                        self.gui_event_listener("Game draw")
+                        self.gui.game_draw()
                         break
 
     def call_reshuffle(self):
-        # send the event to the GUI and wait for response from player, only after that continue the game
-        self.gui_event_listener("reshuffle")
         print("No one can play a card! RESHUFFLE THE STACKS!")
+        # send the event to the GUI and wait for response from player, only after that continue the game
+        self.gui.reshuffle_call()
 
     def accept_reshuffle(self):
         gamestack1.append(p1_reshuffle.pop())
         gamestack2.append(p2_reshuffle.pop())
-        self.gui_event_listener("gamestacks reshuffled")
+        self.gui.reshuffle_done()
 
     def close_game(self):
         self.game_running = False

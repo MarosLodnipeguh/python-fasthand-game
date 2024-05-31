@@ -4,7 +4,8 @@ from enum import Enum
 
 from PIL import Image, ImageTk
 from threading import Thread
-from models.click_event import ClickEvent
+from events_and_listeners.click_event import ClickEvent
+from events_and_listeners.event_listener import EventListener
 
 
 class GameState(Enum):
@@ -23,7 +24,7 @@ class EventName(Enum):
     RESHUFFLE = 4
 
 
-class GameGUI:
+class GameGUI(EventListener):
     # Constants for layout
     CARD_WIDTH = 120  # Adjust based on your card image dimensions
     CARD_HEIGHT = 180  # Adjust based on your card image dimensions
@@ -100,7 +101,7 @@ class GameGUI:
         self.gamestack2 = g2
 
     def load_card_images(self):
-        folder_path = 'images'
+        folder_path = 'resources/images'
         # List all files in the specified directory
         filenames = os.listdir(folder_path)
         # Filter out directories and include the full path for files
@@ -136,8 +137,8 @@ class GameGUI:
         self.repaint_canvas()
 
     def run_game(self):
-        # Start the game loop passing the event listener and computer latency to the logic
-        self.logic.start_game(self.event_listener, self.computer_latency)
+        # Start the game loop passing the chosen computer latency to the logic
+        self.logic.start_game(self.computer_latency)
 
     def close_game(self):
         self.root.destroy()
@@ -203,13 +204,14 @@ class GameGUI:
                 print("You can't reshuffle now!")
 
     # ===================== GUI drawing functions ====================
-    def draw_gameboard(self):
-        canvas = self.canvas  # Alias for self.canvas
-        card_images = self.card_images  # Alias for self.card_images
+    def draw_gameboard(self, canvas, card_images):
 
-        blue_reverse_path = "images/0_reverse_blue.png"
-        red_reverse_path = "images/0_reverse_red.png"
+        blue_reverse_path = "resources/images/0_reverse_blue.png"
+        red_reverse_path = "resources/images/0_reverse_red.png"
 
+        # draw game state notification
+        # if self.game_state == GameState.GAME_IN_PROGRESS:
+        #     pass
         if self.game_state == GameState.WAITING_FOR_RESHUFFLE:
             self.canvas.create_text(90, 400, text="Waiting for reshuffle", font=("Helvetica", 12, "bold"), fill="white")
         elif self.game_state == GameState.PLAYER_1_WINS:
@@ -305,30 +307,43 @@ class GameGUI:
                                     font=("Fixedsys", 8), fill="white")
 
     # ===================== GUI event handlers ====================
-    def event_listener(self, message):
-        if message == "reshuffle":
-            self.game_state = GameState.WAITING_FOR_RESHUFFLE
-        elif message == "Player 1 wins":
-            self.game_state = GameState.PLAYER_1_WINS
-            self.clickable_items.clear()
-        elif message == "Player 2 wins":
-            self.game_state = GameState.PLAYER_2_WINS
-            self.clickable_items.clear()
-        elif message == "Game draw":
-            self.game_state = GameState.GAME_DRAW
-            self.clickable_items.clear()
-        # elif self.game_state == "Game in progress":
-        else:
-            self.root.after(0, self.repaint_canvas)
+    def notify(self, event):
+        pass
+
+    def repaint(self):
+        self.root.after(0, self.repaint_canvas)
+
+    def reshuffle_call(self):
+        self.game_state = GameState.WAITING_FOR_RESHUFFLE
+        self.repaint()
+
+    def reshuffle_done(self):
+        self.game_state = GameState.GAME_IN_PROGRESS
+        self.repaint()
+
+    def player_1_wins(self):
+        self.game_state = GameState.PLAYER_1_WINS
+        self.clickable_items.clear()
+        self.repaint()
+
+    def player_2_wins(self):
+        self.game_state = GameState.PLAYER_2_WINS
+        self.clickable_items.clear()
+        self.repaint()
+
+    def game_draw(self):
+        self.game_state = GameState.GAME_DRAW
+        self.clickable_items.clear()
+        self.repaint()
 
     def repaint_canvas(self):
         # clear everything and recreate
         self.canvas.delete("all")
         self.clickable_items.clear()
         # self.chosen_card = None
-        self.draw_gameboard()
+        self.draw_gameboard(self.canvas, self.card_images)
         self.create_clickable_highlight_rect()
         self.create_chosen_highlight_rect()
         if self.chosen_card is not None:
-            print("Highlight chosen card:" + str(self.chosen_card_index) + " " + str(self.chosen_card))
+            # print("Highlight chosen card:" + str(self.chosen_card_index) + " " + str(self.chosen_card))
             self.highlight_chosen_card(self.canvas, self.chosen_highlight_rect, self.chosen_card)

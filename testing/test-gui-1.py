@@ -7,7 +7,7 @@ from logic import init_new_game, player_turn, computer_turn, print_game_table  #
 
 from logic import p1_hand, p1_supply, p1_reshuffle, p2_hand, p2_supply, p2_reshuffle, gamestack1, gamestack2
 
-folder_path = '../images'
+folder_path = '../resources/images'
 ROWS = 4
 COLUMNS = 13
 CARD_WIDTH = 72  # Adjust based on your card image dimensions

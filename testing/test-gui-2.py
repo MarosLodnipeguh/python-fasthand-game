@@ -42,7 +42,7 @@ def get_all_files(folder_path):
     return filepaths
 
 # Load card images
-folder_path = '../images'
+folder_path = '../resources/images'
 file_list = get_all_files(folder_path)
 card_images = []
 # scale the images to the same size
