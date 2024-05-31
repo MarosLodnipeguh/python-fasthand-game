@@ -82,11 +82,12 @@ class GameGUI(EventListener):
         # Load card images into memory
         self.load_card_images()
 
-        # Create a highlight rectangle (initially hidden)
+        # Create a highlight rectangles (initially hidden)
         self.create_clickable_highlight_rect()
+        self.create_chosen_highlight_rect()
 
         # Bind mouse motion and click events
-        self.canvas.bind('<Motion>', self.highlight_on_mouse_move)
+        self.canvas.bind('<Motion>', self.highlight_playable_cards)
         self.canvas.bind('<Button-1>', self.on_click)
 
     # ===================== GUI initialization functions ====================
@@ -132,8 +133,8 @@ class GameGUI(EventListener):
     def start_game(self):
         self.game_state = GameState.GAME_IN_PROGRESS
         # Create and start the game loop thread
-        self.game_thread = Thread(target=self.run_game)
-        self.game_thread.start()
+        game_thread = Thread(target=self.run_game)
+        game_thread.start()
         self.repaint_canvas()
 
     def run_game(self):
@@ -146,8 +147,33 @@ class GameGUI(EventListener):
 
     # ===================== GUI mouse hover and click functions ====================
 
+    def bind_hover_events(self, card_id):
+        self.canvas.tag_bind(card_id, "<Enter>", lambda event, cid=card_id: self.on_hover(cid))
+        self.canvas.tag_bind(card_id, "<Leave>", lambda event, cid=card_id: self.on_leave(cid))
+
+    def bind_click_events(self, card_id):
+        self.canvas.tag_bind(card_id, "<Button-1>", lambda event, cid=card_id: self.on_click(cid))
+
+    def on_hover(self, card_id):
+        if card_id in self.clickable_items:
+            self.canvas.itemconfig(card_id, outline="yellow")
+
+    def on_leave(self, card_id):
+        if card_id not in self.selected_cards:
+            self.canvas.itemconfig(card_id, outline="")
+
+    def on_click(self, card_id):
+        if card_id in self.selected_cards:
+            self.selected_cards.remove(card_id)
+            self.canvas.itemconfig(card_id, outline="")
+        else:
+            self.selected_cards.add(card_id)
+            self.canvas.itemconfig(card_id, outline="orange")
+
+
+
     # Function to handle card highlight on mouse move
-    def highlight_on_mouse_move(self, event):
+    def highlight_playable_cards(self, event):
         canvas = self.canvas  # Alias for self.canvas
         highlight_rect = self.clickable_highlight_rect  # Alias for self.highlight_id
 
@@ -162,6 +188,21 @@ class GameGUI(EventListener):
             else:
                 canvas.itemconfig(highlight_rect, state='hidden')
 
+    # TODO: on every gui update, the highlight rect vanishes
+    def highlight_chosen_card(self, canvas, chosen_card_image):
+        if chosen_card_image is not None:
+
+            canvas.coords(self.chosen_highlight_rect, canvas.bbox(chosen_card_image))
+            canvas.itemconfig(self.chosen_highlight_rect, state='normal')
+            # highlight_rect = canvas.create_rectangle(0, 0, 0, 0, outline='orange', width=3, state='normal', tags='top')
+            canvas.tag_raise(self.chosen_highlight_rect)
+
+            # print("should highlight")
+            canvas.create_rectangle(10, 10, 10, 10, outline='orange', width=3, state='normal')
+            # canvas.create_text(90, 500, text="a card is chosen", font=("Helvetica", 12, "bold"), fill="white")
+        # else:
+        #     canvas.create_text(90, 500, text="not chosen", font=("Helvetica", 12, "bold"), fill="white")
+
     # Function to handle the click event (call the image_click_function when any of clickable items is clicked)
     def on_click(self, event):
         canvas = self.canvas  # Alias for self.canvas
@@ -169,19 +210,16 @@ class GameGUI(EventListener):
             card_id = key
             bbox = canvas.bbox(card_id)
             if bbox and bbox[0] <= event.x <= bbox[2] and bbox[1] <= event.y <= bbox[3]:
-                self.image_click_event_listener(key, value)
+                self.click_event_handler(key, value)
                 break
 
-    def highlight_chosen_card(self, canvas, chosen_highlight_rect, chosen_card_image):
-        canvas.itemconfig(chosen_highlight_rect, state='normal')
-        canvas.coords(chosen_highlight_rect, canvas.bbox(chosen_card_image))
-
     # Function called when a clickable item is clicked
-    def image_click_event_listener(self, card_image, click_event):
+    def click_event_handler(self, card_image, click_event):
         if click_event.get_name() == "CHOOSE CARD":
             self.chosen_card_index = click_event.get_index()
             self.chosen_card = card_image
-            self.highlight_chosen_card(self.canvas, self.chosen_highlight_rect, self.chosen_card)
+            self.repaint_canvas()
+            # self.highlight_chosen_card(self.canvas, self.chosen_card)
 
         elif click_event.get_name() == "PUT CARD":
             if self.chosen_card is None or self.chosen_card_index is None:
@@ -190,6 +228,7 @@ class GameGUI(EventListener):
             else:
                 chosen_gamestack_index = click_event.get_index()
                 self.logic.player_play(self.chosen_card_index, chosen_gamestack_index)
+                # clear the chosen card after playing it
                 self.chosen_card_index = None
                 self.chosen_card = None
 
@@ -199,7 +238,6 @@ class GameGUI(EventListener):
         elif click_event.get_name() == "RESHUFFLE":
             if self.game_state == GameState.WAITING_FOR_RESHUFFLE:
                 self.logic.accept_reshuffle()
-                self.game_state = GameState.GAME_IN_PROGRESS
             else:
                 print("You can't reshuffle now!")
 
@@ -227,6 +265,7 @@ class GameGUI(EventListener):
         for i, card in enumerate(self.p2_supply):
             card_image = canvas.create_image(25 + i * 3, 50 - i * 3, image=card_images[red_reverse_path], anchor=tk.NW)
 
+        # label
         if len(self.p2_supply) > 0:
             self.canvas.create_text(90, 240, text=("player 2 supply: " + str(len(self.p2_supply))),
                                     font=("Fixedsys", 8), fill="white")
@@ -236,6 +275,7 @@ class GameGUI(EventListener):
             image_path = self.p2_hand[i].get_image_path()
             card_image = canvas.create_image(225 + i * 140, 50, image=card_images[image_path], anchor=tk.NW)
 
+        # label
         self.canvas.create_text(565, 25, text="player 2 hand", font=("Fixedsys", 8), fill="white")
 
         # ===================== ROW 2 =====================
@@ -245,6 +285,7 @@ class GameGUI(EventListener):
             card_image = canvas.create_image(225 + i * 3, 300 - i * 3, image=card_images[red_reverse_path],
                                              anchor=tk.NW)
 
+        # label
         if len(self.p2_reshuffle) > 0:
             self.canvas.create_text(290, 490, text=("reshuffle: " + str(len(self.p2_reshuffle))), font=("Fixedsys", 8),
                                     fill="white")
@@ -253,31 +294,40 @@ class GameGUI(EventListener):
         for i, card in enumerate(self.gamestack1):
             image_path = self.gamestack1[i].get_image_path()
             card_image = canvas.create_image(430 - i * 2, 300 - i * 2, image=card_images[image_path], anchor=tk.NW)
-
             # add only the top card to the clickable list with corresponding event
             if i == len(self.gamestack1) - 1:
                 self.clickable_items[card_image] = ClickEvent("PUT CARD", 1)
+                # highlight the gamestack if a card is chosen
+                # if self.chosen_card is not None:
+                #     highlight_rect = canvas.create_rectangle(0, 0, 0, 0, outline='lightblue', width=3, state='normal')
+                #     canvas.coords(highlight_rect, canvas.bbox(card_image))
+
+
 
         # draw gamestack 2
         for i, card in enumerate(self.gamestack2):
             image_path = self.gamestack2[i].get_image_path()
             card_image = canvas.create_image(580 + i * 2, 300 - i * 2, image=card_images[image_path], anchor=tk.NW)
-
             # add only the top card to the clickable list with corresponding event
             if i == len(self.gamestack2) - 1:
                 self.clickable_items[card_image] = ClickEvent("PUT CARD", 2)
+                # highlight the gamestack if a card is chosen
+                # if self.chosen_card is not None:
+                #     highlight_rect = canvas.create_rectangle(0, 0, 0, 0, outline='lightblue', width=3, state='normal')
+                #     canvas.coords(highlight_rect, canvas.bbox(card_image))
 
+        # label
         self.canvas.create_text(560, 490, text="game stacks", font=("Fixedsys", 8), fill="white")
 
         # draw p1 reshuffle stack
         for i, card in enumerate(self.p1_reshuffle):
             card_image = canvas.create_image(785 - i * 3, 300 - i * 3, image=card_images[blue_reverse_path],
                                              anchor=tk.NW)
-
             # add only the top card to the clickable list with corresponding event
             if i == len(self.p1_reshuffle) - 1:
                 self.clickable_items[card_image] = ClickEvent("RESHUFFLE")
 
+        # label
         if len(self.p1_reshuffle) > 0:
             self.canvas.create_text(840, 490, text=("reshuffle: " + str(len(self.p1_reshuffle))), font=("Fixedsys", 8),
                                     fill="white")
@@ -288,20 +338,21 @@ class GameGUI(EventListener):
         for i, card in enumerate(self.p1_hand):
             image_path = self.p1_hand[i].get_image_path()
             card_image = canvas.create_image(225 + i * 140, 530, image=card_images[image_path], anchor=tk.NW)
-
             # add all cards to the clickable list with corresponding event
             self.clickable_items[card_image] = ClickEvent("CHOOSE CARD", i)
+
+        # label
         self.canvas.create_text(565, 730, text="player 1 hand", font=("Fixedsys", 8), fill="white")
 
         # draw p1 supply
         for i, card in enumerate(self.p1_supply):
             card_image = canvas.create_image(975 - i * 3, 530 - i * 3, image=card_images[blue_reverse_path],
                                              anchor=tk.NW)
-
             # add only the top card to the clickable list with corresponding event
             if i == len(self.p1_supply) - 1:
                 self.clickable_items[card_image] = ClickEvent("DRAW CARD")
 
+        # label
         if len(self.p1_supply) > 0:
             self.canvas.create_text(1030, 720, text=("player 1 supply: " + str(len(self.p1_supply))),
                                     font=("Fixedsys", 8), fill="white")
@@ -325,25 +376,27 @@ class GameGUI(EventListener):
         self.game_state = GameState.PLAYER_1_WINS
         self.clickable_items.clear()
         self.repaint()
+        self.clickable_items.clear()
 
     def player_2_wins(self):
         self.game_state = GameState.PLAYER_2_WINS
         self.clickable_items.clear()
         self.repaint()
+        self.clickable_items.clear()
 
     def game_draw(self):
         self.game_state = GameState.GAME_DRAW
         self.clickable_items.clear()
         self.repaint()
+        self.clickable_items.clear()
 
     def repaint_canvas(self):
         # clear everything and recreate
         self.canvas.delete("all")
         self.clickable_items.clear()
-        # self.chosen_card = None
         self.draw_gameboard(self.canvas, self.card_images)
         self.create_clickable_highlight_rect()
         self.create_chosen_highlight_rect()
-        if self.chosen_card is not None:
-            # print("Highlight chosen card:" + str(self.chosen_card_index) + " " + str(self.chosen_card))
-            self.highlight_chosen_card(self.canvas, self.chosen_highlight_rect, self.chosen_card)
+        self.highlight_chosen_card(self.canvas, self.chosen_card)
+        self.canvas.tag_raise(self.chosen_highlight_rect)
+

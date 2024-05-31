@@ -228,30 +228,38 @@ class GameLogic:
 
     # ===================== Main game loop =====================
 
-    def can_player_play(self, player_hand, player_suuply):
-        # check what cards are on top of gamestacks
-        gm1_top_card = gamestack1[len(gamestack1) - 1]
-        gm2_top_card = gamestack2[len(gamestack2) - 1]
-        gm1_top_card_power = gm1_top_card.get_power()
-        gm2_top_card_power = gm2_top_card.get_power()
+    # True if the player can play or draw a card, False if not
+    def can_player_act(self, player_hand, player_suuply):
 
-        for card in player_hand:
-            player_card_power = card.get_power()
-            if player_card_power + 1 == gm1_top_card_power or player_card_power - 1 == gm1_top_card_power:
-                return True
-            elif player_card_power + 1 == gm2_top_card_power or player_card_power - 1 == gm2_top_card_power:
-                return True
-            # ace card special case
-            elif player_card_power == 1 and gm1_top_card_power == 13:
-                return True
-            elif player_card_power == 1 and gm2_top_card_power == 13:
-                return True
-            # king card special case
-            elif player_card_power == 13 and gm1_top_card_power == 1:
-                return True
-            elif player_card_power == 13 and gm2_top_card_power == 1:
-                return True
-        return False
+        # check if the player can draw a card
+        if len(player_hand) < 5 and len(player_suuply) > 0:
+            return True
+        else:
+            # check what cards are on top of gamestacks
+            gm1_top_card = gamestack1[len(gamestack1) - 1]
+            gm2_top_card = gamestack2[len(gamestack2) - 1]
+            gm1_top_card_power = gm1_top_card.get_power()
+            gm2_top_card_power = gm2_top_card.get_power()
+
+            # check if a play is possible
+            for card in player_hand:
+                player_card_power = card.get_power()
+                if player_card_power + 1 == gm1_top_card_power or player_card_power - 1 == gm1_top_card_power:
+                    return True
+                elif player_card_power + 1 == gm2_top_card_power or player_card_power - 1 == gm2_top_card_power:
+                    return True
+                # ace card special case
+                elif player_card_power == 1 and gm1_top_card_power == 13:
+                    return True
+                elif player_card_power == 1 and gm2_top_card_power == 13:
+                    return True
+                # king card special case
+                elif player_card_power == 13 and gm1_top_card_power == 1:
+                    return True
+                elif player_card_power == 13 and gm2_top_card_power == 1:
+                    return True
+            # if the player can't play a card
+            return False
 
     def start_game(self, computer_latency):
         self.init_new_game()
@@ -264,7 +272,7 @@ class GameLogic:
         computer_player_thread = Thread(target=self.computer_player)
         computer_player_thread.start()
 
-        # loop checking if a player won the game or if the game is a draw
+        # loop checking the game state
         while self.game_running:
             time.sleep(1)
 
@@ -282,27 +290,12 @@ class GameLogic:
                 break
 
             # can players play a card
-            p1_state = self.can_player_play(p1_hand, p1_supply)
-            p2_state = self.can_player_play(p1_hand, p1_supply)
+            can_p1_act = self.can_player_act(p1_hand, p1_supply)
+            can_p2_act = self.can_player_act(p2_hand, p2_supply)
 
             # check if both players cannot play a card
-            if not p1_state and not p2_state:
-
-                # case when both players have full hands
-                if len(p1_hand) == 5 and len(p2_hand) == 5:
-                    self.call_reshuffle()
-
-                # case when only one player has empty supply but both players cant play a card
-                if len(p1_supply) == 0 and len(p2_supply) > 0:
-                    self.call_reshuffle()
-                elif len(p1_supply) > 0 and len(p2_supply) == 0:
-                    self.call_reshuffle()
-
-                # case when both players have empty supplies and cant play a card
-                if len(p1_supply) == 0 and len(p2_supply) == 0:
-                    self.call_reshuffle()
-
-                # if reshuffle stacks are empty, and no one can play a card, game is won by the player with the least cards in hand and supply
+            if not can_p1_act and not can_p2_act:
+                # end the game and check who won if reshuffle stacks are empty and no one can play a card
                 if len(p1_reshuffle) == 0 and len(p2_reshuffle) == 0:
                     if len(p1_hand) + len(p1_supply) < len(p2_hand) + len(p2_supply):
                         print("Player 1 won the game!")
@@ -319,6 +312,9 @@ class GameLogic:
                         self.game_running = False
                         self.gui.game_draw()
                         break
+                else:
+                    # reshuffle the stacks
+                    self.call_reshuffle()
 
     def call_reshuffle(self):
         print("No one can play a card! RESHUFFLE THE STACKS!")
