@@ -4,6 +4,8 @@ class Card:
     image_path = "image path"
     power = -1
 
+
+
     def __init__(self, name, full_name, image_path, power):
         self.name = name
         self.full_name = full_name
