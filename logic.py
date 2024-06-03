@@ -25,6 +25,7 @@ class GameLogic:
     game_running = True
     computer_latency = -1
 
+    # ==================== Constructor ====================
     def __init__(self, gui: EventListener = None):
         """
         Initialize the GameLogic class.
@@ -42,6 +43,7 @@ class GameLogic:
                              p2_hand, p2_supply, p2_reshuffle,
                              gamestack1, gamestack2)
 
+    # ==================== Game Initialization ====================
     def init_new_game(self):
         """
         Initialize a new game by creating a deck of cards, shuffling it, and distributing the cards to the players lists.
@@ -81,6 +83,7 @@ class GameLogic:
             p1_reshuffle.append(deck.pop())
             p2_reshuffle.append(deck.pop())
 
+    # ==================== Player Actions ====================
     def player_play(self, chosen_card_index, chosen_gamestack_index):
         """
         Handle the player's action to play a card.
@@ -131,6 +134,7 @@ class GameLogic:
             else:
                 print("You can't draw! Your hand is full!")
 
+    # ==================== Computer Player Thread ====================
     def computer_play(self, player_hand, player_supply):
         """
         Handle the computer's action to play a card.
@@ -244,6 +248,7 @@ class GameLogic:
             if play:
                 self.gui.repaint()
 
+    # ==================== Main Game loop ====================
     def can_player_act(self, player_hand, player_suuply):
         """
         Check if the player can play or draw a card.

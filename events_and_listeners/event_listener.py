@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 
 class EventListener(ABC):
     """
-    Interface for the event listener. It is used to notify the view about the events that happened in the game.
+    Interface for the event listener. Implemented by the GUI.
+    It is used to notify the view about the events that happened in the game.
     """
     # @abstractmethod
     # def notify(self, event):

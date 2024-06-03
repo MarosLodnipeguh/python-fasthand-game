@@ -12,6 +12,10 @@ from models.game_states import GameState
 
 # Main class for the game GUI
 class GameGUI(EventListener):
+    """
+    The main class for the game GUI. It is responsible for drawing the game board and handling user input.
+    Implements the EventListener interface to receive events from the game logic.
+    """
     # Constants for layout
     CARD_WIDTH = 120
     CARD_HEIGHT = 180
@@ -43,7 +47,7 @@ class GameGUI(EventListener):
     gamestack1 = []
     gamestack2 = []
 
-    # Constructor
+    # ==================== Constructor ====================
     def __init__(self, logic):
         """
         Initialize the GUI, create the main window and load card images.
@@ -81,7 +85,7 @@ class GameGUI(EventListener):
         self.canvas.bind('<Motion>', self.highlight_playable_cards)
         self.canvas.bind('<Button-1>', self.on_click)
 
-    # GUI initialization functions
+    # ==================== GUI initialization functions ====================
     def set_shared_lists(self, p1_h, p1_s, p1_r, p2_h, p2_s, p2_r, g1, g2):
         """
         Set shared lists between GUI and logic.
@@ -138,7 +142,7 @@ class GameGUI(EventListener):
         """
         self.root.mainloop()
 
-    # Game loop functions
+    # ==================== Game loop functions ====================
     def start_game(self):
         """
         Start the game loop. Called when the "Start the game" button is clicked.
@@ -163,7 +167,7 @@ class GameGUI(EventListener):
         self.root.destroy()
         self.logic.close_game()
 
-    # GUI mouse hover and click functions
+    # ==================== GUI mouse hover and click functions ====================
 
     # TODO: rework the hover and click functions, in order to fix highlighting the chosen card
     # def bind_hover_events(self, card_id):
