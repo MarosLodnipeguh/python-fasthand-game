@@ -6,6 +6,7 @@ from models.cards_data import CardsEnum
 from models.card import Card
 from events_and_listeners.event_listener import EventListener
 
+# Initialize player's hand, supply, reshuffle stack and game stacks
 p1_hand = []  # 5 cards
 p1_supply = []  # 13 cards at the start
 p1_reshuffle = []  # 7 cards at the start
@@ -17,28 +18,34 @@ gamestack2 = []  # 1 card at the start
 
 
 class GameLogic:
+    """
+    The GameLogic class handles the logic of the card game.
+    It manages the game state, player actions, and computer player logic.
+    """
     game_running = True
     computer_latency = -1
 
     def __init__(self, gui: EventListener = None):
+        """
+        Initialize the GameLogic class.
+        :param gui: The GUI object that will be used to interact with the game, initially None.
+        """
         self.gui = gui
-
-        # self.p1 = Player()
-        # self.p2 = Player()
-        #
-        # self.gm1 = GameStack()
-        # self.gm2 = GameStack()
-
-    # ===================== End of constructor =====================
 
     def set_gui(self, gui: EventListener):
+        """
+        Set the GUI object and share the game state lists with it.
+        :param gui: The GUI object that will be used to interact with the game.
+        """
         self.gui = gui
-        # Share these lists with the GUI
         gui.set_shared_lists(p1_hand, p1_supply, p1_reshuffle,
                              p2_hand, p2_supply, p2_reshuffle,
                              gamestack1, gamestack2)
 
     def init_new_game(self):
+        """
+        Initialize a new game by creating a deck of cards, shuffling it, and distributing the cards to the players lists.
+        """
         # fill the deck with all the cards
         deck = []
         for entry in CardsEnum:
@@ -74,12 +81,12 @@ class GameLogic:
             p1_reshuffle.append(deck.pop())
             p2_reshuffle.append(deck.pop())
 
-    # ===================== Player actions =====================
     def player_play(self, chosen_card_index, chosen_gamestack_index):
-        # if chosen_gamestack_index is None:
-        #     update_callback("player didn't choose a gamestack")
-        #     return
-
+        """
+        Handle the player's action to play a card.
+        :param chosen_card_index: The index of the card that the player chose to play.
+        :param chosen_gamestack_index: The index of the game stack that the player chose to play the card on.
+        """
         # get the chosen gamestack
         chosen_gamestack = None
         if chosen_gamestack_index == 1:
@@ -114,6 +121,9 @@ class GameLogic:
             print("You can't play this card!")
 
     def player_draw(self):
+        """
+        Handle the player's action to draw a card.
+        """
         if len(p1_supply) > 0:
             if len(p1_hand) < 5:
                 p1_hand.append(p1_supply.pop())
@@ -121,10 +131,13 @@ class GameLogic:
             else:
                 print("You can't draw! Your hand is full!")
 
-    # ===================== Computer player logic =====================
-
-    # returns True if the computer played something, False if not
     def computer_play(self, player_hand, player_supply):
+        """
+        Handle the computer's action to play a card.
+        :param player_hand: The hand of the computer player.
+        :param player_supply: The supply of the computer player.
+        :return: True if the computer played a card, False if not.
+        """
         can_play = False
 
         # check what cards are on top of gamestacks
@@ -202,7 +215,7 @@ class GameLogic:
                 self.gui.repaint()
 
             # wait before drawing a card
-            time.sleep(1)
+            time.sleep(0.1)
 
             # draw a card from the supply to the hand
             if len(player_supply) > 0:
@@ -212,11 +225,16 @@ class GameLogic:
 
         # if the computer can't play a card
         else:
-            # print("\nComputer can't play ANY card!")
             return False
 
     def computer_player(self):
-        # wait 3 seconds before the computer starts playing
+        """
+        The main loop for the computer player thread.
+        It waits for a certain latency, then tries to play a card.
+        If the computer played a card, the GUI update is called.
+        """
+
+        # wait before the computer starts playing
         time.sleep(2)
 
         while self.game_running:
@@ -226,10 +244,13 @@ class GameLogic:
             if play:
                 self.gui.repaint()
 
-    # ===================== Main game loop =====================
-
-    # True if the player can play or draw a card, False if not
     def can_player_act(self, player_hand, player_suuply):
+        """
+        Check if the player can play or draw a card.
+        :param player_hand: The hand of the player.
+        :param player_suuply: The supply of the player.
+        :return: True if the player can play or draw a card, False if not.
+        """
 
         # check if the player can draw a card
         if len(player_hand) < 5 and len(player_suuply) > 0:
@@ -262,6 +283,11 @@ class GameLogic:
             return False
 
     def start_game(self, computer_latency):
+        """
+        Start the main game loop.
+        It checks if players can play a card and if any player won the game.
+        :param computer_latency: The latency of the computer player.
+        """
         self.init_new_game()
         self.gui.repaint()
 
@@ -317,15 +343,24 @@ class GameLogic:
                     self.call_reshuffle()
 
     def call_reshuffle(self):
+        """
+        Call the GUI for reshuffling the game stacks.
+        """
         print("No one can play a card! RESHUFFLE THE STACKS!")
         # send the event to the GUI and wait for response from player, only after that continue the game
         self.gui.reshuffle_call()
 
     def accept_reshuffle(self):
+        """
+        Accept the reshuffling of the game stacks. Called by the GUI.
+        """
         gamestack1.append(p1_reshuffle.pop())
         gamestack2.append(p2_reshuffle.pop())
         self.gui.reshuffle_done()
 
     def close_game(self):
+        """
+        Close the game and exit the program.
+        """
         self.game_running = False
         exit(0)

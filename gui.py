@@ -6,28 +6,15 @@ from PIL import Image, ImageTk
 from threading import Thread
 from events_and_listeners.click_event import ClickEvent
 from events_and_listeners.event_listener import EventListener
+from models.event_names import EventName
+from models.game_states import GameState
 
 
-class GameState(Enum):
-    READY = 1
-    GAME_IN_PROGRESS = 2
-    WAITING_FOR_RESHUFFLE = 3
-    PLAYER_1_WINS = 4
-    PLAYER_2_WINS = 5
-    GAME_DRAW = 6
-
-
-class EventName(Enum):
-    CHOOSE_CARD = 1
-    PUT_CARD = 2
-    DRAW_CARD = 3
-    RESHUFFLE = 4
-
-
+# Main class for the game GUI
 class GameGUI(EventListener):
     # Constants for layout
-    CARD_WIDTH = 120  # Adjust based on your card image dimensions
-    CARD_HEIGHT = 180  # Adjust based on your card image dimensions
+    CARD_WIDTH = 120
+    CARD_HEIGHT = 180
     SCREEN_WIDTH = 1125
     SCREEN_HEIGHT = 750
 
@@ -56,8 +43,12 @@ class GameGUI(EventListener):
     gamestack1 = []
     gamestack2 = []
 
-    # ===================== Constructor ====================
+    # Constructor
     def __init__(self, logic):
+        """
+        Initialize the GUI, create the main window and load card images.
+        :param logic: the game logic object
+        """
         self.logic = logic
 
         self.root = tk.Tk()
@@ -90,8 +81,11 @@ class GameGUI(EventListener):
         self.canvas.bind('<Motion>', self.highlight_playable_cards)
         self.canvas.bind('<Button-1>', self.on_click)
 
-    # ===================== GUI initialization functions ====================
+    # GUI initialization functions
     def set_shared_lists(self, p1_h, p1_s, p1_r, p2_h, p2_s, p2_r, g1, g2):
+        """
+        Set shared lists between GUI and logic.
+        """
         self.p1_hand = p1_h
         self.p1_supply = p1_s
         self.p1_reshuffle = p1_r
@@ -101,8 +95,11 @@ class GameGUI(EventListener):
         self.gamestack1 = g1
         self.gamestack2 = g2
 
-    def load_card_images(self):
-        folder_path = 'resources/images'
+    def load_card_images(self, folder_path='resources/images'):
+        """
+        Load card images into memory.
+        :param folder_path: the path to the folder containing the card images
+        """
         # List all files in the specified directory
         filenames = os.listdir(folder_path)
         # Filter out directories and include the full path for files
@@ -116,21 +113,36 @@ class GameGUI(EventListener):
             self.card_images[path] = photo
 
     def set_computer_latency(self, value):
+        """
+        Set the computer latency. Called when the slider is moved.
+        """
         float_value = float(value)
         self.computer_latency = float_value
 
     def create_clickable_highlight_rect(self):
+        """
+        Create a highlight rectangle for clickable items.
+        """
         self.clickable_highlight_rect = self.canvas.create_rectangle(0, 0, 0, 0, outline='yellow', width=3,
                                                                      state='hidden')
 
     def create_chosen_highlight_rect(self):
+        """
+        Create a highlight rectangle for chosen items.
+        """
         self.chosen_highlight_rect = self.canvas.create_rectangle(0, 0, 0, 0, outline='orange', width=3, state='hidden')
 
     def run(self):
+        """
+        Run the main loop of the GUI.
+        """
         self.root.mainloop()
 
-    # ===================== Game loop functions ====================
+    # Game loop functions
     def start_game(self):
+        """
+        Start the game loop. Called when the "Start the game" button is clicked.
+        """
         self.game_state = GameState.GAME_IN_PROGRESS
         # Create and start the game loop thread
         game_thread = Thread(target=self.run_game)
@@ -138,42 +150,66 @@ class GameGUI(EventListener):
         self.repaint_canvas()
 
     def run_game(self):
+        """
+        Run the game loop. Creates a thread for the game logic.
+        """
         # Start the game loop passing the chosen computer latency to the logic
         self.logic.start_game(self.computer_latency)
 
     def close_game(self):
+        """
+        Close the game. Called when the window is closed.
+        """
         self.root.destroy()
         self.logic.close_game()
 
-    # ===================== GUI mouse hover and click functions ====================
+    # GUI mouse hover and click functions
 
-    def bind_hover_events(self, card_id):
-        self.canvas.tag_bind(card_id, "<Enter>", lambda event, cid=card_id: self.on_hover(cid))
-        self.canvas.tag_bind(card_id, "<Leave>", lambda event, cid=card_id: self.on_leave(cid))
-
-    def bind_click_events(self, card_id):
-        self.canvas.tag_bind(card_id, "<Button-1>", lambda event, cid=card_id: self.on_click(cid))
-
-    def on_hover(self, card_id):
-        if card_id in self.clickable_items:
-            self.canvas.itemconfig(card_id, outline="yellow")
-
-    def on_leave(self, card_id):
-        if card_id not in self.selected_cards:
-            self.canvas.itemconfig(card_id, outline="")
-
-    def on_click(self, card_id):
-        if card_id in self.selected_cards:
-            self.selected_cards.remove(card_id)
-            self.canvas.itemconfig(card_id, outline="")
-        else:
-            self.selected_cards.add(card_id)
-            self.canvas.itemconfig(card_id, outline="orange")
-
-
+    # TODO: rework the hover and click functions, in order to fix highlighting the chosen card
+    # def bind_hover_events(self, card_id):
+    #     """
+    #     Bind hover events to a card.
+    #     """
+    #     self.canvas.tag_bind(card_id, "<Enter>", lambda event, cid=card_id: self.on_hover(cid))
+    #     self.canvas.tag_bind(card_id, "<Leave>", lambda event, cid=card_id: self.on_leave(cid))
+    #
+    # def bind_click_events(self, card_id):
+    #     """
+    #     Bind click events to a card.
+    #     """
+    #     self.canvas.tag_bind(card_id, "<Button-1>", lambda event, cid=card_id: self.on_click(cid))
+    #
+    # def on_hover(self, card_id):
+    #     """
+    #     Handle hover event on a card.
+    #     """
+    #     if card_id in self.clickable_items:
+    #         self.canvas.itemconfig(card_id, outline="yellow")
+    #
+    # def on_leave(self, card_id):
+    #     """
+    #     Handle leave event on a card.
+    #     """
+    #     if card_id not in self.selected_cards:
+    #         self.canvas.itemconfig(card_id, outline="")
+    #
+    # def on_click(self, card_id):
+    #     """
+    #     Handle click event on a card.
+    #     """
+    #     if card_id in self.selected_cards:
+    #         self.selected_cards.remove(card_id)
+    #         self.canvas.itemconfig(card_id, outline="")
+    #     else:
+    #         self.selected_cards.add(card_id)
+    #         self.canvas.itemconfig(card_id, outline="orange")
 
     # Function to handle card highlight on mouse move
     def highlight_playable_cards(self, event):
+        """
+        Highlight playable cards on mouse move.
+        :param event: mouse move event
+        """
         canvas = self.canvas  # Alias for self.canvas
         highlight_rect = self.clickable_highlight_rect  # Alias for self.highlight_id
 
@@ -190,21 +226,27 @@ class GameGUI(EventListener):
 
     # TODO: on every gui update, the highlight rect vanishes
     def highlight_chosen_card(self, canvas, chosen_card_image):
+        """
+        Highlight chosen card. Called on every GUI update to keep the highlight between updates.
+        :param canvas: the canvas object
+        :param chosen_card_image: the chosen card image
+        """
         if chosen_card_image is not None:
-
             canvas.coords(self.chosen_highlight_rect, canvas.bbox(chosen_card_image))
             canvas.itemconfig(self.chosen_highlight_rect, state='normal')
             # highlight_rect = canvas.create_rectangle(0, 0, 0, 0, outline='orange', width=3, state='normal', tags='top')
             canvas.tag_raise(self.chosen_highlight_rect)
-
             # print("should highlight")
-            canvas.create_rectangle(10, 10, 10, 10, outline='orange', width=3, state='normal')
+            # canvas.create_rectangle(10, 10, 10, 10, outline='orange', width=3, state='normal')
             # canvas.create_text(90, 500, text="a card is chosen", font=("Helvetica", 12, "bold"), fill="white")
         # else:
         #     canvas.create_text(90, 500, text="not chosen", font=("Helvetica", 12, "bold"), fill="white")
 
-    # Function to handle the click event (call the image_click_function when any of clickable items is clicked)
     def on_click(self, event):
+        """
+        Handle click event on the canvas images. Calls the image_click_function when a clickable item is clicked.
+        :param event: mouse click event
+        """
         canvas = self.canvas  # Alias for self.canvas
         for key, value in self.clickable_items.items():  # key: card_image, value: click_event
             card_id = key
@@ -213,15 +255,19 @@ class GameGUI(EventListener):
                 self.click_event_handler(key, value)
                 break
 
-    # Function called when a clickable item is clicked
     def click_event_handler(self, card_image, click_event):
-        if click_event.get_name() == "CHOOSE CARD":
+        """
+        Handle the click event on a card image.
+        :param card_image: image object on canvas clicked
+        :param click_event: ClickEvent object, contains the type of action and card index
+        """
+        if click_event.get_name() == EventName.CHOOSE_CARD:
             self.chosen_card_index = click_event.get_index()
             self.chosen_card = card_image
             self.repaint_canvas()
             # self.highlight_chosen_card(self.canvas, self.chosen_card)
 
-        elif click_event.get_name() == "PUT CARD":
+        elif click_event.get_name() == EventName.PUT_CARD:
             if self.chosen_card is None or self.chosen_card_index is None:
                 print("Choose a card first!")
                 return
@@ -232,10 +278,10 @@ class GameGUI(EventListener):
                 self.chosen_card_index = None
                 self.chosen_card = None
 
-        elif click_event.get_name() == "DRAW CARD":
+        elif click_event.get_name() == EventName.DRAW_CARD:
             self.logic.player_draw()
 
-        elif click_event.get_name() == "RESHUFFLE":
+        elif click_event.get_name() == EventName.RESHUFFLE:
             if self.game_state == GameState.WAITING_FOR_RESHUFFLE:
                 self.logic.accept_reshuffle()
             else:
@@ -243,6 +289,11 @@ class GameGUI(EventListener):
 
     # ===================== GUI drawing functions ====================
     def draw_gameboard(self, canvas, card_images):
+        """
+        Draw the game board. Called on every GUI update.
+        :param canvas: the canvas object
+        :param card_images: the card images dictionary, key: image_path, value: photo
+        """
 
         blue_reverse_path = "resources/images/0_reverse_blue.png"
         red_reverse_path = "resources/images/0_reverse_red.png"
@@ -296,7 +347,7 @@ class GameGUI(EventListener):
             card_image = canvas.create_image(430 - i * 2, 300 - i * 2, image=card_images[image_path], anchor=tk.NW)
             # add only the top card to the clickable list with corresponding event
             if i == len(self.gamestack1) - 1:
-                self.clickable_items[card_image] = ClickEvent("PUT CARD", 1)
+                self.clickable_items[card_image] = ClickEvent(EventName.PUT_CARD, 1)
                 # highlight the gamestack if a card is chosen
                 # if self.chosen_card is not None:
                 #     highlight_rect = canvas.create_rectangle(0, 0, 0, 0, outline='lightblue', width=3, state='normal')
@@ -310,7 +361,7 @@ class GameGUI(EventListener):
             card_image = canvas.create_image(580 + i * 2, 300 - i * 2, image=card_images[image_path], anchor=tk.NW)
             # add only the top card to the clickable list with corresponding event
             if i == len(self.gamestack2) - 1:
-                self.clickable_items[card_image] = ClickEvent("PUT CARD", 2)
+                self.clickable_items[card_image] = ClickEvent(EventName.PUT_CARD, 2)
                 # highlight the gamestack if a card is chosen
                 # if self.chosen_card is not None:
                 #     highlight_rect = canvas.create_rectangle(0, 0, 0, 0, outline='lightblue', width=3, state='normal')
@@ -325,7 +376,7 @@ class GameGUI(EventListener):
                                              anchor=tk.NW)
             # add only the top card to the clickable list with corresponding event
             if i == len(self.p1_reshuffle) - 1:
-                self.clickable_items[card_image] = ClickEvent("RESHUFFLE")
+                self.clickable_items[card_image] = ClickEvent(EventName.RESHUFFLE)
 
         # label
         if len(self.p1_reshuffle) > 0:
@@ -339,7 +390,7 @@ class GameGUI(EventListener):
             image_path = self.p1_hand[i].get_image_path()
             card_image = canvas.create_image(225 + i * 140, 530, image=card_images[image_path], anchor=tk.NW)
             # add all cards to the clickable list with corresponding event
-            self.clickable_items[card_image] = ClickEvent("CHOOSE CARD", i)
+            self.clickable_items[card_image] = ClickEvent(EventName.CHOOSE_CARD, i)
 
         # label
         self.canvas.create_text(565, 730, text="player 1 hand", font=("Fixedsys", 8), fill="white")
@@ -350,7 +401,7 @@ class GameGUI(EventListener):
                                              anchor=tk.NW)
             # add only the top card to the clickable list with corresponding event
             if i == len(self.p1_supply) - 1:
-                self.clickable_items[card_image] = ClickEvent("DRAW CARD")
+                self.clickable_items[card_image] = ClickEvent(EventName.DRAW_CARD)
 
         # label
         if len(self.p1_supply) > 0:
@@ -358,8 +409,6 @@ class GameGUI(EventListener):
                                     font=("Fixedsys", 8), fill="white")
 
     # ===================== GUI event handlers ====================
-    def notify(self, event):
-        pass
 
     def repaint(self):
         self.root.after(0, self.repaint_canvas)
