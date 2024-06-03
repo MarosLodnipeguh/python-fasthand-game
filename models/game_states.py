@@ -2,6 +2,9 @@ from enum import Enum
 
 
 class GameState(Enum):
+    """
+    Enum class for game states. Used to store states of the game.
+    """
     READY = 1
     GAME_IN_PROGRESS = 2
     WAITING_FOR_RESHUFFLE = 3

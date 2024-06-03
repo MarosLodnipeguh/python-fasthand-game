@@ -66,7 +66,7 @@ class GameGUI(EventListener):
         self.canvas.create_text(600, 365, text="Set the computer latency:", font=("Helvetica", 12, "bold"),
                                 fill="white")
 
-        slider = tk.Scale(self.root, from_=0.1, to=10, orient='horizontal', resolution=0.1,
+        slider = tk.Scale(self.root, from_=0.01, to=10, orient='horizontal', resolution=0.01,
                           command=self.set_computer_latency)
         self.canvas.create_window(600, 400, window=slider)
 
@@ -411,35 +411,56 @@ class GameGUI(EventListener):
     # ===================== GUI event handlers ====================
 
     def repaint(self):
+        """
+        Repaint the canvas. Called on every GUI update.
+        """
         self.root.after(0, self.repaint_canvas)
 
     def reshuffle_call(self):
+        """
+        Handle reshuffle call event from the logic.
+        """
         self.game_state = GameState.WAITING_FOR_RESHUFFLE
         self.repaint()
 
     def reshuffle_done(self):
+        """
+        Call the logic to reshuffle the deck.
+        """
         self.game_state = GameState.GAME_IN_PROGRESS
         self.repaint()
 
     def player_1_wins(self):
+        """
+        Handle player 1 wins event from the logic.
+        """
         self.game_state = GameState.PLAYER_1_WINS
         self.clickable_items.clear()
         self.repaint()
         self.clickable_items.clear()
 
     def player_2_wins(self):
+        """
+        Handle player 2 wins event from the logic.
+        """
         self.game_state = GameState.PLAYER_2_WINS
         self.clickable_items.clear()
         self.repaint()
         self.clickable_items.clear()
 
     def game_draw(self):
+        """
+        Handle game draw event from the logic.
+        """
         self.game_state = GameState.GAME_DRAW
         self.clickable_items.clear()
         self.repaint()
         self.clickable_items.clear()
 
     def repaint_canvas(self):
+        """
+        Repaint the canvas. Called on every GUI update. Clears the canvas and redraws the game board.
+        """
         # clear everything and recreate
         self.canvas.delete("all")
         self.clickable_items.clear()

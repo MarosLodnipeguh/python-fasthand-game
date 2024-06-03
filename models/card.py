@@ -1,12 +1,20 @@
 class Card:
+    """
+    Card class that represents a card in the game. Created from the CardsEnum class entries.
+    """
     name = "card name"
     full_name = "full card name"
     image_path = "image path"
     power = -1
 
-
-
     def __init__(self, name, full_name, image_path, power):
+        """
+        Constructor of the Card class
+        :param name: short name of the card (e.g. 1H, 2D, 3C, 4S)
+        :param full_name: full name of the card
+        :param image_path: path to the image of the card
+        :param power: power of the card (1-13) - used for comparing cards
+        """
         self.name = name
         self.full_name = full_name
         self.image_path = image_path

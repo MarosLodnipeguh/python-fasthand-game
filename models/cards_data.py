@@ -3,7 +3,16 @@ from enum import Enum
 
 
 class CardsEnum(Enum):
+    """
+    Enum class for cards data. Used to store data about cards in the game and to create instances of the Card class.
+    """
     def __init__(self, full_name, image_path, power):
+        """
+        Constructor of the CardsEnum class
+        :param full_name: full name of the card
+        :param image_path: path to the image of the card
+        :param power: power of the card
+        """
         self.full_name = full_name
         self.image_path = image_path
         self.power = power
