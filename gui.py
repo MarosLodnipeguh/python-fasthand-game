@@ -22,6 +22,17 @@ class GameGUI(EventListener):
     SCREEN_WIDTH = 1125
     SCREEN_HEIGHT = 750
 
+    BACKGROUND_COLOR = '#19A7CE'
+    HIGHLIGHT_COLOR = '#393E46'
+    CHOSEN_COLOR = '#DA0037'
+
+    # BACKGROUND_COLOR = 'green'
+    # HIGHLIGHT_COLOR = 'yellow'
+    # CHOSEN_COLOR = 'orange'
+
+    HIGHLIGHT_WIDTH = 2
+    CHOSEN_WIDTH = 2
+
     # GUI components
     canvas = None
     card_images = {}  # key: image_path, value: photo
@@ -60,7 +71,7 @@ class GameGUI(EventListener):
         self.root.protocol("WM_DELETE_WINDOW", self.close_game)
 
         # UI components
-        self.canvas = tk.Canvas(self.root, width=self.SCREEN_WIDTH, height=self.SCREEN_HEIGHT, bg='green')
+        self.canvas = tk.Canvas(self.root, width=self.SCREEN_WIDTH, height=self.SCREEN_HEIGHT, bg=self.BACKGROUND_COLOR)
         self.canvas.pack()
 
         # Welcome screen
@@ -127,14 +138,17 @@ class GameGUI(EventListener):
         """
         Create a highlight rectangle for clickable items.
         """
-        self.clickable_highlight_rect = self.canvas.create_rectangle(0, 0, 0, 0, outline='yellow', width=3,
+        self.clickable_highlight_rect = self.canvas.create_rectangle(0, 0, 0, 0, outline=self.HIGHLIGHT_COLOR,
+                                                                     width=self.HIGHLIGHT_WIDTH,
                                                                      state='hidden')
 
     def create_chosen_highlight_rect(self):
         """
         Create a highlight rectangle for chosen items.
         """
-        self.chosen_highlight_rect = self.canvas.create_rectangle(0, 0, 0, 0, outline='orange', width=3, state='hidden')
+        self.chosen_highlight_rect = self.canvas.create_rectangle(0, 0, 0, 0, outline=self.CHOSEN_COLOR,
+                                                                  width=self.CHOSEN_WIDTH,
+                                                                  state='hidden')
 
     def run(self):
         """
@@ -268,8 +282,8 @@ class GameGUI(EventListener):
         if click_event.get_name() == EventName.CHOOSE_CARD:
             self.chosen_card_index = click_event.get_index()
             self.chosen_card = card_image
-            self.repaint_canvas()
-            # self.highlight_chosen_card(self.canvas, self.chosen_card)
+            # self.repaint_canvas()
+            self.highlight_chosen_card(self.canvas, self.chosen_card)
 
         elif click_event.get_name() == EventName.PUT_CARD:
             if self.chosen_card is None or self.chosen_card_index is None:
@@ -356,8 +370,6 @@ class GameGUI(EventListener):
                 # if self.chosen_card is not None:
                 #     highlight_rect = canvas.create_rectangle(0, 0, 0, 0, outline='lightblue', width=3, state='normal')
                 #     canvas.coords(highlight_rect, canvas.bbox(card_image))
-
-
 
         # draw gamestack 2
         for i, card in enumerate(self.gamestack2):
@@ -473,4 +485,3 @@ class GameGUI(EventListener):
         self.create_chosen_highlight_rect()
         self.highlight_chosen_card(self.canvas, self.chosen_card)
         self.canvas.tag_raise(self.chosen_highlight_rect)
-
