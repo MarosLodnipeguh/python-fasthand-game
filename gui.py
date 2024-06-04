@@ -81,7 +81,7 @@ class GameGUI(EventListener):
         button = tk.Button(self.root, text="Start the game", command=self.start_game)
         self.canvas.create_window(600, 300, window=button)
 
-        self.canvas.create_text(600, 365, text="Set the computer latency:", font=("Helvetica", 12, "bold"),
+        self.canvas.create_text(600, 365, text="Set the computer latency (seconds):", font=("Helvetica", 12, "bold"),
                                 fill="white")
 
         slider = tk.Scale(self.root, from_=0.01, to=10, orient='horizontal', resolution=0.01,
@@ -343,7 +343,7 @@ class GameGUI(EventListener):
             card_image = canvas.create_image(225 + i * 140, 50, image=card_images[image_path], anchor=tk.NW)
 
         # label
-        self.canvas.create_text(565, 25, text="player 2 hand", font=("Fixedsys", 8), fill="white")
+        self.canvas.create_text(565, 25, text="player 2 hand (max 5)", font=("Fixedsys", 8), fill="white")
 
         # ===================== ROW 2 =====================
 
@@ -407,7 +407,7 @@ class GameGUI(EventListener):
             self.clickable_items[card_image] = ClickEvent(EventName.CHOOSE_CARD, i)
 
         # label
-        self.canvas.create_text(565, 730, text="player 1 hand", font=("Fixedsys", 8), fill="white")
+        self.canvas.create_text(565, 730, text="player 1 hand (max 5)", font=("Fixedsys", 8), fill="white")
 
         # draw p1 supply
         for i, card in enumerate(self.p1_supply):
