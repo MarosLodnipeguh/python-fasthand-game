@@ -1,11 +1,14 @@
 import os
 import tkinter as tk
-from enum import Enum
+from threading import Thread
+from typing import Dict
 
 from PIL import Image, ImageTk
-from threading import Thread
+
 from events_and_listeners.click_event import ClickEvent
 from events_and_listeners.event_listener import EventListener
+from logic import GameLogic
+from models.card import Card
 from models.event_names import EventName
 from models.game_states import GameState
 
@@ -35,8 +38,8 @@ class GameGUI(EventListener):
 
     # GUI components
     canvas = None
-    card_images = {}  # key: image_path, value: photo
-    clickable_items = {}  # key: card_image, value: click_event (type of action and card index in its list)
+    card_images: Dict[str, tk.PhotoImage] = {}  # key: image_path
+    clickable_items: Dict[tk.PhotoImage, ClickEvent] = {}
     clickable_highlight_rect = None
 
     # global chosen card to be remembered between gui updates
@@ -49,17 +52,17 @@ class GameGUI(EventListener):
     game_state = GameState.READY
 
     # shared lists between GUI and logic
-    p1_hand = []
-    p1_supply = []
-    p1_reshuffle = []
-    p2_hand = []
-    p2_supply = []
-    p2_reshuffle = []
-    gamestack1 = []
-    gamestack2 = []
+    p1_hand = [Card]
+    p1_supply = [Card]
+    p1_reshuffle = [Card]
+    p2_hand = [Card]
+    p2_supply = [Card]
+    p2_reshuffle = [Card]
+    gamestack1 = [Card]
+    gamestack2 = [Card]
 
     # ==================== Constructor ====================
-    def __init__(self, logic):
+    def __init__(self, logic: GameLogic):
         """
         Initialize the GUI, create the main window and load card images.
         :param logic: the game logic object
@@ -97,7 +100,8 @@ class GameGUI(EventListener):
         self.canvas.bind('<Button-1>', self.on_click)
 
     # ==================== GUI initialization functions ====================
-    def set_shared_lists(self, p1_h, p1_s, p1_r, p2_h, p2_s, p2_r, g1, g2):
+    def set_shared_lists(self, p1_h: [Card], p1_s: [Card], p1_r: [Card], p2_h: [Card], p2_s: [Card], p2_r: [Card],
+                         g1: [Card], g2: [Card]):
         """
         Set shared lists between GUI and logic.
         """
@@ -127,7 +131,7 @@ class GameGUI(EventListener):
             path = path.replace("\\", "/")
             self.card_images[path] = photo
 
-    def set_computer_latency(self, value):
+    def set_computer_latency(self, value: float):
         """
         Set the computer latency. Called when the slider is moved.
         """
@@ -223,7 +227,7 @@ class GameGUI(EventListener):
     #         self.canvas.itemconfig(card_id, outline="orange")
 
     # Function to handle card highlight on mouse move
-    def highlight_playable_cards(self, event):
+    def highlight_playable_cards(self, event: tk.Event):
         """
         Highlight playable cards on mouse move.
         :param event: mouse move event
@@ -243,7 +247,7 @@ class GameGUI(EventListener):
                 canvas.itemconfig(highlight_rect, state='hidden')
 
     # TODO: on every gui update, the highlight rect vanishes
-    def highlight_chosen_card(self, canvas, chosen_card_image):
+    def highlight_chosen_card(self, canvas: tk.Canvas, chosen_card_image: tk.PhotoImage):
         """
         Highlight chosen card. Called on every GUI update to keep the highlight between updates.
         :param canvas: the canvas object
@@ -252,15 +256,9 @@ class GameGUI(EventListener):
         if chosen_card_image is not None:
             canvas.coords(self.chosen_highlight_rect, canvas.bbox(chosen_card_image))
             canvas.itemconfig(self.chosen_highlight_rect, state='normal')
-            # highlight_rect = canvas.create_rectangle(0, 0, 0, 0, outline='orange', width=3, state='normal', tags='top')
             canvas.tag_raise(self.chosen_highlight_rect)
-            # print("should highlight")
-            # canvas.create_rectangle(10, 10, 10, 10, outline='orange', width=3, state='normal')
-            # canvas.create_text(90, 500, text="a card is chosen", font=("Helvetica", 12, "bold"), fill="white")
-        # else:
-        #     canvas.create_text(90, 500, text="not chosen", font=("Helvetica", 12, "bold"), fill="white")
 
-    def on_click(self, event):
+    def on_click(self, event: tk.Event):
         """
         Handle click event on the canvas images. Calls the image_click_function when a clickable item is clicked.
         :param event: mouse click event
@@ -273,7 +271,7 @@ class GameGUI(EventListener):
                 self.click_event_handler(key, value)
                 break
 
-    def click_event_handler(self, card_image, click_event):
+    def click_event_handler(self, card_image: tk.PhotoImage, click_event: ClickEvent):
         """
         Handle the click event on a card image.
         :param card_image: image object on canvas clicked
@@ -291,7 +289,7 @@ class GameGUI(EventListener):
                 return
             else:
                 chosen_gamestack_index = click_event.get_index()
-                self.logic.player_play(self.chosen_card_index, chosen_gamestack_index)
+                self.logic.player_put(self.chosen_card_index, chosen_gamestack_index)
                 # clear the chosen card after playing it
                 self.chosen_card_index = None
                 self.chosen_card = None
@@ -306,7 +304,7 @@ class GameGUI(EventListener):
                 print("You can't reshuffle now!")
 
     # ===================== GUI drawing functions ====================
-    def draw_gameboard(self, canvas, card_images):
+    def draw_gameboard(self, canvas: tk.Canvas, card_images: {str, tk.PhotoImage}):
         """
         Draw the game board. Called on every GUI update.
         :param canvas: the canvas object
@@ -320,7 +318,7 @@ class GameGUI(EventListener):
         # if self.game_state == GameState.GAME_IN_PROGRESS:
         #     pass
         if self.game_state == GameState.WAITING_FOR_RESHUFFLE:
-            self.canvas.create_text(90, 400, text="Waiting for reshuffle", font=("Helvetica", 12, "bold"), fill="white")
+            self.canvas.create_text(90, 400, text="Waiting for reshuffle, \nclick on the right stack", font=("Helvetica", 12, "bold"), fill="white")
         elif self.game_state == GameState.PLAYER_1_WINS:
             self.canvas.create_text(90, 400, text="Player 1 wins!", font=("Helvetica", 12, "bold"), fill="white")
         elif self.game_state == GameState.PLAYER_2_WINS:
@@ -484,4 +482,3 @@ class GameGUI(EventListener):
         self.create_clickable_highlight_rect()
         self.create_chosen_highlight_rect()
         self.highlight_chosen_card(self.canvas, self.chosen_card)
-        self.canvas.tag_raise(self.chosen_highlight_rect)

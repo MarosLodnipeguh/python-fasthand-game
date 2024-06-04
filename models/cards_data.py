@@ -6,7 +6,7 @@ class CardsEnum(Enum):
     """
     Enum class for cards data. Used to store data about cards in the game and to create instances of the Card class.
     """
-    def __init__(self, full_name, image_path, power):
+    def __init__(self, full_name: str, image_path: str, power: int):
         """
         Constructor of the CardsEnum class
         :param full_name: full name of the card

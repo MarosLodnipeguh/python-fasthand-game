@@ -7,7 +7,7 @@ class Card:
     image_path = "image path"
     power = -1
 
-    def __init__(self, name, full_name, image_path, power):
+    def __init__(self, name: str, full_name: str, image_path: str, power: int):
         """
         Constructor of the Card class
         :param name: short name of the card (e.g. 1H, 2D, 3C, 4S)

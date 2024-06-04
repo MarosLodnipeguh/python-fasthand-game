@@ -1,5 +1,8 @@
+from models.event_names import EventName
+
+
 class ClickEvent:
-    def __init__(self, name, index=None):
+    def __init__(self, name: EventName, index: int = None):
         """
         Constructor of the ClickEvent class. Represents a click event on a card.
         :param name: name of the event. Described by the event_names.EventName enum.

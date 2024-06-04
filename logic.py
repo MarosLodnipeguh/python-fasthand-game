@@ -7,14 +7,14 @@ from models.card import Card
 from events_and_listeners.event_listener import EventListener
 
 # Initialize player's hand, supply, reshuffle stack and game stacks
-p1_hand = []  # 5 cards
-p1_supply = []  # 13 cards at the start
-p1_reshuffle = []  # 7 cards at the start
-p2_hand = []  # 5 cards
-p2_supply = []  # 13 cards at the start
-p2_reshuffle = []  # 7 cards at the start
-gamestack1 = []  # 1 card at the start
-gamestack2 = []  # 1 card at the start
+p1_hand = [Card]  # 5 cards
+p1_supply = [Card]  # 13 cards at the start
+p1_reshuffle = [Card]  # 7 cards at the start
+p2_hand = [Card]  # 5 cards
+p2_supply = [Card]  # 13 cards at the start
+p2_reshuffle = [Card]  # 7 cards at the start
+gamestack1 = [Card]  # 1 card at the start
+gamestack2 = [Card]  # 1 card at the start
 
 
 class GameLogic:
@@ -22,8 +22,8 @@ class GameLogic:
     The GameLogic class handles the logic of the card game.
     It manages the game state, player actions, and computer player logic.
     """
-    game_running = True
-    computer_latency = -1
+    game_running: bool = False
+    computer_latency: float = -1
 
     # ==================== Constructor ====================
     def __init__(self, gui: EventListener = None):
@@ -36,7 +36,7 @@ class GameLogic:
     def set_gui(self, gui: EventListener):
         """
         Set the GUI object and share the game state lists with it.
-        :param gui: The GUI object that will be used to interact with the game.
+        :param gui: The GameGUI object that will be used to interact with the game.
         """
         self.gui = gui
         gui.set_shared_lists(p1_hand, p1_supply, p1_reshuffle,
@@ -84,7 +84,7 @@ class GameLogic:
             p2_reshuffle.append(deck.pop())
 
     # ==================== Player Actions ====================
-    def player_play(self, chosen_card_index, chosen_gamestack_index):
+    def player_put(self, chosen_card_index: int, chosen_gamestack_index: int):
         """
         Handle the player's action to play a card.
         :param chosen_card_index: The index of the card that the player chose to play.
@@ -135,14 +135,13 @@ class GameLogic:
                 print("You can't draw! Your hand is full!")
 
     # ==================== Computer Player Thread ====================
-    def computer_play(self, player_hand, player_supply):
+    def computer_play(self, player_hand: [Card], player_supply: [Card]):
         """
         Handle the computer's action to play a card.
         :param player_hand: The hand of the computer player.
         :param player_supply: The supply of the computer player.
-        :return: True if the computer played a card, False if not.
+        :return: True if the computer put or draw a card (for gui repainting), False if not.
         """
-        can_play = False
 
         # check what cards are on top of gamestacks
         gm1_top_card = gamestack1[len(gamestack1) - 1]
@@ -150,86 +149,49 @@ class GameLogic:
         gm1_top_card_power = gm1_top_card.get_power()
         gm2_top_card_power = gm2_top_card.get_power()
 
-        # check if a play is possible
-        for card in player_hand:
+        for i, card in enumerate(player_hand):
             player_card_power = card.get_power()
             if player_card_power + 1 == gm1_top_card_power or player_card_power - 1 == gm1_top_card_power:
-                can_play = True
-                break
+                self.computer_put(i, 1)
+                return True
             elif player_card_power + 1 == gm2_top_card_power or player_card_power - 1 == gm2_top_card_power:
-                can_play = True
-                break
+                self.computer_put(i, 2)
+                return True
             # ace card special case
             elif player_card_power == 1 and gm1_top_card_power == 13:
-                can_play = True
-                break
+                self.computer_put(i, 1)
+                return True
             elif player_card_power == 1 and gm2_top_card_power == 13:
-                can_play = True
-                break
+                self.computer_put(i, 2)
+                return True
             # king card special case
             elif player_card_power == 13 and gm1_top_card_power == 1:
-                can_play = True
-                break
+                self.computer_put(i, 1)
+                return True
             elif player_card_power == 13 and gm2_top_card_power == 1:
-                can_play = True
-                break
+                self.computer_put(i, 2)
+                return True
+            # if the computer can't play a card, draw a card
+            elif len(player_hand) < 5 and len(player_supply) > 0:
+                p2_hand.append(p2_supply.pop())
+                return True
+            # else:
+                # print("Computer can't play a card!")
+        # after checking all cards in loop
+        return False
 
-        if can_play:
-            # computer chooses a card to play
-            chosen_card_index = -1
-            chosen_gamestack = -1
-            for i, card in enumerate(player_hand):
-                player_card_power = card.get_power()
-                if player_card_power + 1 == gm1_top_card_power or player_card_power - 1 == gm1_top_card_power:
-                    chosen_card_index = i
-                    chosen_gamestack = 1
-                    break
-                elif player_card_power + 1 == gm2_top_card_power or player_card_power - 1 == gm2_top_card_power:
-                    chosen_card_index = i
-                    chosen_gamestack = 2
-                    break
-                # ace card special case
-                elif player_card_power == 1 and gm1_top_card_power == 13:
-                    chosen_card_index = i
-                    chosen_gamestack = 1
-                    break
-                elif player_card_power == 1 and gm2_top_card_power == 13:
-                    chosen_card_index = i
-                    chosen_gamestack = 2
-                    break
-                # king card special case
-                elif player_card_power == 13 and gm1_top_card_power == 1:
-                    chosen_card_index = i
-                    chosen_gamestack = 1
-                    break
-                elif player_card_power == 13 and gm2_top_card_power == 1:
-                    chosen_card_index = i
-                    chosen_gamestack = 2
-                    break
-
-            # remove the chosen card from the hand (play the card)
-            chosen_card = player_hand.pop(chosen_card_index)
-
-            # put the chosen card on the right gamestack
-            if chosen_gamestack == 1:
-                gamestack1.append(chosen_card)
-                self.gui.repaint()
-            elif chosen_gamestack == 2:
-                gamestack2.append(chosen_card)
-                self.gui.repaint()
-
-            # wait before drawing a card
-            time.sleep(0.1)
-
-            # draw a card from the supply to the hand
-            if len(player_supply) > 0:
-                player_hand.append(player_supply.pop())
-
-            return True
-
-        # if the computer can't play a card
+    def computer_put(self, chosen_card_index: int, chosen_gamestack: int):
+        """
+        Handle the computer's action to put a card on a gamestack.
+        :param chosen_gamestack: The index of the game stack that the computer chose to play the card on.
+        :param chosen_card_index: The index of the card that the computer chose to play.
+        """
+        if chosen_gamestack == 1:
+            gamestack1.append(p2_hand.pop(chosen_card_index))
+        elif chosen_gamestack == 2:
+            gamestack2.append(p2_hand.pop(chosen_card_index))
         else:
-            return False
+            print("Invalid gamestack index!")
 
     def computer_player(self):
         """
@@ -242,14 +204,15 @@ class GameLogic:
         time.sleep(2)
 
         while self.game_running:
-            time.sleep(self.computer_latency)
-
-            play = self.computer_play(p2_hand, p2_supply)
-            if play:
+            # try to play a card
+            played = self.computer_play(p2_hand, p2_supply)
+            if played:
                 self.gui.repaint()
 
+            time.sleep(self.computer_latency)
+
     # ==================== Main Game loop ====================
-    def can_player_act(self, player_hand, player_suuply):
+    def can_player_act(self, player_hand: [Card], player_suuply: [Card]):
         """
         Check if the player can play or draw a card.
         :param player_hand: The hand of the player.
@@ -287,7 +250,7 @@ class GameLogic:
             # if the player can't play a card
             return False
 
-    def start_game(self, computer_latency):
+    def start_game(self, computer_latency: float):
         """
         Start the main game loop.
         It checks if players can play a card and if any player won the game.
@@ -296,7 +259,8 @@ class GameLogic:
         self.init_new_game()
         self.gui.repaint()
 
-        # set latency for computer
+        # set game variables
+        self.game_running = True
         self.computer_latency = computer_latency
 
         # start the computer player thread
@@ -349,10 +313,9 @@ class GameLogic:
 
     def call_reshuffle(self):
         """
-        Call the GUI for reshuffling the game stacks.
+        Call the GUI for reshuffling the game stacks and wait for response from player, only after that continue the game
         """
-        print("No one can play a card! RESHUFFLE THE STACKS!")
-        # send the event to the GUI and wait for response from player, only after that continue the game
+        print("No one can play a card! Reshuffle the game stacks!")
         self.gui.reshuffle_call()
 
     def accept_reshuffle(self):
